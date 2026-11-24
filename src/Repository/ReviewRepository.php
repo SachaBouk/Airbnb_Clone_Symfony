@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Entity\Listing;
 use App\Entity\Review;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -16,28 +17,33 @@ class ReviewRepository extends ServiceEntityRepository
         parent::__construct($registry, Review::class);
     }
 
-//    /**
-//     * @return Review[] Returns an array of Review objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('r')
-//            ->andWhere('r.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('r.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+    /**
+     * @return list<Review> newest first, with their author already loaded
+     */
+    public function findForListing(Listing $listing): array
+    {
+        return $this->createQueryBuilder('r')
+            ->addSelect('a')
+            ->join('r.author', 'a')
+            ->andWhere('r.listing = :listing')
+            ->setParameter('listing', $listing)
+            ->orderBy('r.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 
-//    public function findOneBySomeField($value): ?Review
-//    {
-//        return $this->createQueryBuilder('r')
-//            ->andWhere('r.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+    /**
+     * @return float|null rounded to one decimal, null when the listing has no review
+     */
+    public function averageRatingFor(Listing $listing): ?float
+    {
+        $average = $this->createQueryBuilder('r')
+            ->select('AVG(r.rating)')
+            ->andWhere('r.listing = :listing')
+            ->setParameter('listing', $listing)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return null === $average ? null : round((float) $average, 1);
+    }
 }

@@ -1,6 +1,194 @@
-### Variables
-@baseUrl = http://127.0.0.1:8000
+###############################################################################
+# Airbnb Clone API — toutes les routes, testables depuis VS Code
+# (extension REST Client ou httpYac : cliquer sur "Send Request").
+#
+# Prérequis : symfony serve -d   +   bin/console doctrine:fixtures:load
+#
+# Les ids changent à chaque rechargement des fixtures (SQLite ne réutilise pas
+# les anciens ids) : ils sont donc lus dans les réponses précédentes via
+# "# @name". Exécuter "amenities" et "listings" avant les requêtes qui en dépendent.
+###############################################################################
 
-### Vérifier que l'API et la BDD répondent
+@baseUrl = http://127.0.0.1:8000
+@json = application/json
+
+
+### Santé de l'API et de la BDD
 GET {{baseUrl}}/api/health
-Accept: application/json
+Accept: {{json}}
+
+
+###############################################################################
+# ÉQUIPEMENTS (Amenity, relation ManyToMany avec Listing)
+###############################################################################
+
+### Liste des équipements (fournit les ids et les slugs utilisés plus bas)
+# @name amenities
+GET {{baseUrl}}/api/amenities
+Accept: {{json}}
+
+
+###############################################################################
+# LISTING — lecture, pagination, filtres
+###############################################################################
+
+### Liste paginée (page 1, 20 par défaut)
+# @name listings
+GET {{baseUrl}}/api/listings
+Accept: {{json}}
+
+### Pagination : page 2, 5 logements par page
+GET {{baseUrl}}/api/listings?page=2&limit=5
+Accept: {{json}}
+
+### Filtre par titre (recherche partielle, insensible à la casse)
+GET {{baseUrl}}/api/listings?title=villa
+Accept: {{json}}
+
+### Filtre par ville + nombre de voyageurs + prix max
+GET {{baseUrl}}/api/listings?city=berlin&guests=2&maxPrice=200
+Accept: {{json}}
+
+### Filtre par pays
+GET {{baseUrl}}/api/listings?country=portugal
+Accept: {{json}}
+
+### Filtre par équipement (slug, cf. /api/amenities)
+GET {{baseUrl}}/api/listings?amenity=wifi
+Accept: {{json}}
+
+### Filtre par dates : logements sans réservation (en attente ou confirmée) sur la période
+GET {{baseUrl}}/api/listings?availableFrom=2026-12-01&availableTo=2027-01-31
+Accept: {{json}}
+
+### Filtres combinés + pagination (format de l'énoncé)
+GET {{baseUrl}}/api/listings?title=appartement&amenity=wifi&availableFrom=2026-12-20&availableTo=2026-12-27&page=1&limit=3
+Accept: {{json}}
+
+### Erreur 422 : filtre invalide (guests doit être > 0)
+GET {{baseUrl}}/api/listings?guests=0
+Accept: {{json}}
+
+### Erreur 422 : limit trop grand (max 50)
+GET {{baseUrl}}/api/listings?limit=500
+Accept: {{json}}
+
+### Erreur 422 : availableFrom sans availableTo
+GET {{baseUrl}}/api/listings?availableFrom=2026-12-20
+Accept: {{json}}
+
+### Détail d'un logement (avec avis et note moyenne) — exécuter "listings" avant
+GET {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}
+Accept: {{json}}
+
+### Erreur 404 : logement inexistant
+GET {{baseUrl}}/api/listings/999999
+Accept: {{json}}
+
+
+###############################################################################
+# LISTING — création, modification, suppression
+# Exécuter "amenities" et "listings" avant, puis ces requêtes dans l'ordre.
+###############################################################################
+
+### Créer un logement → 201 + en-tête Location
+# @name created
+POST {{baseUrl}}/api/listings
+Content-Type: {{json}}
+Accept: {{json}}
+
+{
+    "title": "Cabane au bord du lac",
+    "description": "Une cabane en bois, au calme, avec vue sur le lac d'Annecy.",
+    "priceByNight": 95,
+    "city": "Annecy",
+    "country": "France",
+    "maxGuests": 3,
+    "hostId": {{listings.response.body.$.items[0].host.id}},
+    "amenityIds": [
+        {{amenities.response.body.$[0].id}},
+        {{amenities.response.body.$[1].id}}
+    ]
+}
+
+### Lire le logement créé
+GET {{baseUrl}}/api/listings/{{created.response.body.$.id}}
+Accept: {{json}}
+
+### Modifier le logement créé (PUT = remplacement complet, équipements compris)
+PUT {{baseUrl}}/api/listings/{{created.response.body.$.id}}
+Content-Type: {{json}}
+Accept: {{json}}
+
+{
+    "title": "Cabane rénovée au bord du lac",
+    "description": "Entièrement rénovée en 2026.",
+    "priceByNight": 120.5,
+    "city": "Annecy",
+    "country": "France",
+    "maxGuests": 4,
+    "hostId": {{listings.response.body.$.items[0].host.id}},
+    "amenityIds": [
+        {{amenities.response.body.$[2].id}}
+    ]
+}
+
+### Supprimer le logement créé → 204
+DELETE {{baseUrl}}/api/listings/{{created.response.body.$.id}}
+
+### Vérifier la suppression → 404
+GET {{baseUrl}}/api/listings/{{created.response.body.$.id}}
+Accept: {{json}}
+
+### Erreur 422 : champs manquants ou invalides
+POST {{baseUrl}}/api/listings
+Content-Type: {{json}}
+Accept: {{json}}
+
+{
+    "title": "",
+    "priceByNight": -10
+}
+
+### Erreur 422 : hôte et équipement inexistants
+POST {{baseUrl}}/api/listings
+Content-Type: {{json}}
+Accept: {{json}}
+
+{
+    "title": "Logement fantôme",
+    "description": "Hôte inconnu.",
+    "priceByNight": 50,
+    "city": "Lyon",
+    "country": "France",
+    "maxGuests": 2,
+    "hostId": 999999,
+    "amenityIds": [999999]
+}
+
+### Erreur 400 : JSON mal formé
+POST {{baseUrl}}/api/listings
+Content-Type: {{json}}
+Accept: {{json}}
+
+{ "title": "oubli de l'accolade"
+
+### Erreur 404 : modifier un logement inexistant
+PUT {{baseUrl}}/api/listings/999999
+Content-Type: {{json}}
+Accept: {{json}}
+
+{
+    "title": "Inexistant",
+    "description": "x",
+    "priceByNight": 50,
+    "city": "Lyon",
+    "country": "France",
+    "maxGuests": 2,
+    "hostId": {{listings.response.body.$.items[0].host.id}}
+}
+
+### Erreur 409 : supprimer un logement qui a des réservations
+# (le premier logement des fixtures en a toujours)
+DELETE {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}
+Accept: {{json}}

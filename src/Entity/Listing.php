@@ -3,23 +3,30 @@
 namespace App\Entity;
 
 use App\Repository\ListingRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Serializer\Attribute\SerializedName;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ListingRepository::class)]
 class Listing
 {
+    #[Groups(['listing:list', 'listing:read'])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
+    #[Groups(['listing:list', 'listing:read'])]
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
     #[Assert\Length(max: 255)]
     private ?string $title = null;
 
+    #[Groups(['listing:read'])]
     #[ORM\Column(type: Types::TEXT)]
     #[Assert\NotBlank]
     private ?string $description = null;
@@ -27,34 +34,108 @@ class Listing
     /**
      * Doctrine maps DECIMAL to a PHP string to avoid float rounding errors.
      */
+    #[Groups(['listing:list', 'listing:read'])]
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     #[Assert\NotBlank]
     #[Assert\Positive]
     private ?string $priceByNight = null;
 
+    #[Groups(['listing:list', 'listing:read'])]
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
     #[Assert\Length(max: 255)]
     private ?string $city = null;
 
+    #[Groups(['listing:list', 'listing:read'])]
     #[ORM\Column(length: 100)]
     #[Assert\NotBlank]
     #[Assert\Length(max: 100)]
     private ?string $country = null;
 
+    #[Groups(['listing:list', 'listing:read'])]
     #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Positive]
     private ?int $maxGuests = null;
 
+    #[Groups(['listing:list', 'listing:read'])]
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull]
     private ?User $host = null;
 
+    /**
+     * Owning side of the ManyToMany: Doctrine fills the listing_amenity join table from here.
+     *
+     * @var Collection<int, Amenity>
+     */
+    #[ORM\ManyToMany(targetEntity: Amenity::class, inversedBy: 'listings')]
+    #[ORM\OrderBy(['name' => 'ASC'])]
+    private Collection $amenities;
+
+    public function __construct()
+    {
+        $this->amenities = new ArrayCollection();
+    }
+
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    /**
+     * @return Collection<int, Amenity>
+     */
+    public function getAmenities(): Collection
+    {
+        return $this->amenities;
+    }
+
+    /**
+     * Serialized as "amenities". array_values() guarantees a JSON array: after a removal the
+     * collection keys have gaps, and the serializer would otherwise output an object.
+     *
+     * @return list<Amenity>
+     */
+    #[Groups(['listing:list', 'listing:read'])]
+    #[SerializedName('amenities')]
+    public function getAmenityList(): array
+    {
+        return array_values($this->amenities->toArray());
+    }
+
+    public function addAmenity(Amenity $amenity): static
+    {
+        if (!$this->amenities->contains($amenity)) {
+            $this->amenities->add($amenity);
+            $amenity->addListing($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAmenity(Amenity $amenity): static
+    {
+        if ($this->amenities->removeElement($amenity)) {
+            $amenity->removeListing($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param iterable<Amenity> $amenities
+     */
+    public function replaceAmenities(iterable $amenities): static
+    {
+        foreach ($this->amenities->toArray() as $amenity) {
+            $this->removeAmenity($amenity);
+        }
+        foreach ($amenities as $amenity) {
+            $this->addAmenity($amenity);
+        }
+
+        return $this;
     }
 
     public function getTitle(): ?string

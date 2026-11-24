@@ -2,6 +2,7 @@
 
 namespace App\DataFixtures;
 
+use App\Entity\Amenity;
 use App\Entity\Booking;
 use App\Entity\Listing;
 use App\Entity\Review;
@@ -26,6 +27,14 @@ class AppFixtures extends Fixture
         ['Nice', 'France'], ['Annecy', 'France'], ['Biarritz', 'France'], ['Lisbonne', 'Portugal'],
         ['Porto', 'Portugal'], ['Barcelone', 'Espagne'], ['Madrid', 'Espagne'], ['Rome', 'Italie'],
         ['Florence', 'Italie'], ['Berlin', 'Allemagne'], ['Amsterdam', 'Pays-Bas'], ['Bruxelles', 'Belgique'],
+    ];
+
+    /** slug => name */
+    private const AMENITIES = [
+        'wifi' => 'Wi-Fi', 'kitchen' => 'Cuisine équipée', 'parking' => 'Parking gratuit',
+        'pool' => 'Piscine', 'air-conditioning' => 'Climatisation', 'washing-machine' => 'Lave-linge',
+        'tv' => 'Télévision', 'workspace' => 'Espace de travail', 'pets-allowed' => 'Animaux acceptés',
+        'balcony' => 'Balcon', 'sea-view' => 'Vue sur mer', 'fireplace' => 'Cheminée',
     ];
 
     private const LISTING_TYPES = [
@@ -56,8 +65,14 @@ class AppFixtures extends Fixture
             $travelers[] = $this->createUser($manager, $hashedPassword, $faker->unique()->safeEmail(), $faker->firstName(), $faker->lastName());
         }
 
+        $amenities = [];
+        foreach (self::AMENITIES as $slug => $name) {
+            $amenities[] = $amenity = (new Amenity())->setSlug($slug)->setName($name);
+            $manager->persist($amenity);
+        }
+
         for ($i = 0; $i < self::LISTING_COUNT; ++$i) {
-            $listing = $this->createListing($manager, $faker, $hosts[$i % \count($hosts)]);
+            $listing = $this->createListing($manager, $faker, $hosts[$i % \count($hosts)], $amenities);
             $this->createBookingsAndReviews($manager, $faker, $listing, $travelers);
         }
 
@@ -77,7 +92,10 @@ class AppFixtures extends Fixture
         return $user;
     }
 
-    private function createListing(ObjectManager $manager, Generator $faker, User $host): Listing
+    /**
+     * @param list<Amenity> $amenities
+     */
+    private function createListing(ObjectManager $manager, Generator $faker, User $host, array $amenities): Listing
     {
         [$city, $country] = $faker->randomElement(self::CITIES);
 
@@ -88,7 +106,8 @@ class AppFixtures extends Fixture
             ->setCity($city)
             ->setCountry($country)
             ->setMaxGuests($faker->numberBetween(1, 8))
-            ->setHost($host);
+            ->setHost($host)
+            ->replaceAmenities($faker->randomElements($amenities, $faker->numberBetween(2, 6)));
 
         $manager->persist($listing);
 
@@ -103,7 +122,7 @@ class AppFixtures extends Fixture
     private function createBookingsAndReviews(ObjectManager $manager, Generator $faker, Listing $listing, array $travelers): void
     {
         $today = new \DateTimeImmutable('today');
-        $cursor = $today->modify(\sprintf('-%d days', $faker->numberBetween(120, 200)));
+        $cursor = $today->modify(\sprintf('-%d days', $faker->numberBetween(30, 90)));
 
         for ($i = 0, $count = $faker->numberBetween(0, 5); $i < $count; ++$i) {
             $arrival = $cursor->modify(\sprintf('+%d days', $faker->numberBetween(3, 40)));

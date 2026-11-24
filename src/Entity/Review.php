@@ -5,29 +5,35 @@ namespace App\Entity;
 use App\Repository\ReviewRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ReviewRepository::class)]
 class Review
 {
+    #[Groups(['review:read'])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
+    #[Groups(['review:read'])]
     #[ORM\Column(type: Types::SMALLINT)]
     #[Assert\NotNull]
     #[Assert\Range(min: 1, max: 5)]
     private ?int $rating = null;
 
+    #[Groups(['review:read'])]
     #[ORM\Column(type: Types::TEXT)]
     #[Assert\NotBlank]
     #[Assert\Length(max: 2000)]
     private ?string $comment = null;
 
+    #[Groups(['review:read'])]
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
+    #[Groups(['review:read'])]
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull]
