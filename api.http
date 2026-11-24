@@ -1,0 +1,6 @@
+### Variables
+@baseUrl = http://127.0.0.1:8000
+
+### Vérifier que l'API et la BDD répondent
+GET {{baseUrl}}/api/health
+Accept: application/json
