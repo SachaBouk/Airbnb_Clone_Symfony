@@ -11,6 +11,11 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
  */
 final readonly class ListingSearch extends PaginationDTO
 {
+    public const SORT_RATING = 'rating';
+    public const SORT_PRICE_ASC = 'price_asc';
+    public const SORT_PRICE_DESC = 'price_desc';
+    public const SORTS = [self::SORT_RATING, self::SORT_PRICE_ASC, self::SORT_PRICE_DESC];
+
     public function __construct(
 
         #[Assert\Length(max: 255)]
@@ -35,6 +40,10 @@ final readonly class ListingSearch extends PaginationDTO
         public ?\DateTimeImmutable $availableFrom = null,
 
         public ?\DateTimeImmutable $availableTo = null,
+
+        /** null = by id; "rating" = best average first; "price_asc" / "price_desc" = by price per night. */
+        #[Assert\Choice(choices: self::SORTS)]
+        public ?string $sort = null,
 
         int $page = 1,
         int $limit = 20,

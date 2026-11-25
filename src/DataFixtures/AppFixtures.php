@@ -72,7 +72,12 @@ class AppFixtures extends Fixture
 
         for ($i = 0; $i < self::LISTING_COUNT; ++$i) {
             $listing = $this->createListing($manager, $faker, $hosts[$i % \count($hosts)], $amenities);
-            $this->createBookingsAndReviews($manager, $faker, $listing, $travelers);
+            // traveler@example.com never reviews the first listing: see the demo stay below.
+            $this->createBookingsAndReviews($manager, $faker, $listing, $travelers, 0 === $i ? [$travelers[0]] : []);
+
+            if (0 === $i) {
+                $this->createDemoStay($manager, $listing, $travelers[0]);
+            }
         }
 
         // Self-referencing ManyToMany: travelers follow hosts, and hosts follow each other.
@@ -128,11 +133,33 @@ class AppFixtures extends Fixture
     }
 
     /**
-     *
-     * @param list<User> $travelers
+     * A finished, confirmed stay of traveler@example.com at the first listing (host@example.com),
+     * without review: lets api.http demo POST /api/listings/{id}/reviews.
+     * 120 days ago, so it never overlaps the generated bookings (they start at most 90 days ago).
      */
-    private function createBookingsAndReviews(ObjectManager $manager, Generator $faker, Listing $listing, array $travelers): void
+    private function createDemoStay(ObjectManager $manager, Listing $listing, User $traveler): void
     {
+        $arrival = new \DateTimeImmutable('-120 days midnight');
+
+        $manager->persist((new Booking())
+            ->setArrivalDate($arrival)
+            ->setDepartureDate($arrival->modify('+3 days'))
+            ->setGuests(1)
+            ->setTotalPrice(number_format(3 * (float) $listing->getPriceByNight(), 2, '.', ''))
+            ->setStatus(BookingStatus::Confirmed)
+            ->setTraveler($traveler)
+            ->setListing($listing));
+    }
+
+    /**
+     * @param list<User> $travelers
+     * @param list<User> $neverReviewing travelers who must not get a generated review on this listing
+     */
+    private function createBookingsAndReviews(ObjectManager $manager, Generator $faker, Listing $listing, array $travelers, array $neverReviewing = []): void
+    {
+        // One review per traveler per listing (enforced by a unique constraint on Review).
+        $reviewed = $neverReviewing;
+
         $today = new \DateTimeImmutable('today');
         $cursor = $today->modify(\sprintf('-%d days', $faker->numberBetween(30, 90)));
 
@@ -160,7 +187,8 @@ class AppFixtures extends Fixture
 
             $manager->persist($booking);
 
-            if ($isPast && BookingStatus::Confirmed === $status && $faker->boolean(70)) {
+            if ($isPast && BookingStatus::Confirmed === $status && !\in_array($traveler, $reviewed, true) && $faker->boolean(70)) {
+                $reviewed[] = $traveler;
                 $review = (new Review())
                     ->setRating($faker->biasedNumberBetween(1, 5, 'sqrt'))
                     ->setComment($faker->paragraph())

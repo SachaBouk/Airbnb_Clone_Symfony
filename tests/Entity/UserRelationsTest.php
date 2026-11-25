@@ -30,10 +30,11 @@ final class UserRelationsTest extends KernelTestCase
     {
         $host = $this->createUser('host@example.com');
         $author = $this->createUser('author@example.com');
-        $listing = $this->createListing($host, 'Studio');
-        $this->createListing($host, 'Villa');
-        $this->createReview($listing, $author, 5);
-        $this->createReview($listing, $author, 3);
+        $studio = $this->createListing($host, 'Studio');
+        $villa = $this->createListing($host, 'Villa');
+        // One review per author per listing: one on each listing.
+        $this->createReview($studio, $author, 5);
+        $this->createReview($villa, $author, 3);
         $this->em->flush();
         $this->em->clear();
 

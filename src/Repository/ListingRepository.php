@@ -6,6 +6,7 @@ use App\Model\ListingSearch;
 use App\Model\Paginator;
 use App\Entity\Booking;
 use App\Entity\Listing;
+use App\Entity\Review;
 use App\Enum\BookingStatus;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -27,9 +28,19 @@ class ListingRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('l')
             ->addSelect('h', 'a')
             ->join('l.host', 'h')
-            ->leftJoin('l.amenities', 'a')
-            ->orderBy('l.id', 'ASC')
-            ->addOrderBy('a.name', 'ASC');
+            ->leftJoin('l.amenities', 'a');
+
+        match ($search->sort) {
+            // Listings without review count as 0 (COALESCE), so they come last.
+            ListingSearch::SORT_RATING => $qb
+                ->addSelect(\sprintf('(SELECT COALESCE(AVG(sr.rating), 0) FROM %s sr WHERE sr.listing = l) AS HIDDEN averageRating', Review::class))
+                ->orderBy('averageRating', 'DESC'),
+            ListingSearch::SORT_PRICE_ASC => $qb->orderBy('l.priceByNight', 'ASC'),
+            ListingSearch::SORT_PRICE_DESC => $qb->orderBy('l.priceByNight', 'DESC'),
+            default => null,
+        };
+        // Then by id, so that pages are stable when several listings tie.
+        $qb->addOrderBy('l.id', 'ASC')->addOrderBy('a.name', 'ASC');
 
         if (null !== $search->title) {
             // "!" escapes LIKE wildcards typed by the user (SQLite has no default escape character).

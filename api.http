@@ -71,6 +71,18 @@ Accept: {{json}}
 GET {{baseUrl}}/api/listings?title=appartement&amenity=wifi&availableFrom=2026-12-20&availableTo=2026-12-27&page=1&limit=3
 Accept: {{json}}
 
+### Tri : les mieux notés d'abord (les logements sans avis en dernier)
+GET {{baseUrl}}/api/listings?sort=rating&limit=5
+Accept: {{json}}
+
+### Tri : du moins cher au plus cher (ou sort=price_desc)
+GET {{baseUrl}}/api/listings?sort=price_asc&limit=5
+Accept: {{json}}
+
+### Erreur 422 : tri inconnu (rating, price_asc ou price_desc)
+GET {{baseUrl}}/api/listings?sort=popularite
+Accept: {{json}}
+
 ### Erreur 422 : filtre invalide (guests doit être > 0)
 GET {{baseUrl}}/api/listings?guests=0
 Accept: {{json}}
@@ -180,6 +192,109 @@ Authorization: Bearer {{loginTraveler.response.body.$.token}}
 ### Erreur 422 : pagination invalide (limit entre 1 et 50)
 GET {{baseUrl}}/api/users/{{listings.response.body.$.items[0].host.id}}/followers?limit=0
 Accept: {{json}}
+
+
+###############################################################################
+# AVIS / NOTES (1 à 5 étoiles)
+# Exécuter "listings", "loginHost" et "loginTraveler" avant, puis dans l'ordre.
+# Les fixtures garantissent que traveler@example.com a terminé un séjour
+# confirmé dans le premier logement (hôte : host@example.com) sans l'avoir noté.
+###############################################################################
+
+### Fil des derniers avis (tous logements, du plus récent au plus ancien, paginé)
+GET {{baseUrl}}/api/reviews?page=1&limit=10
+Accept: {{json}}
+
+### Le voyageur note le premier logement → 201
+# @name myReview
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/reviews
+Content-Type: {{json}}
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+{
+    "rating": 4,
+    "comment": "Logement très propre et hôte aux petits soins."
+}
+
+### Liste des logements connecté : chaque logement a "myRating" (ma note, ou null)
+GET {{baseUrl}}/api/listings?limit=3
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+### Modifier son avis → 200
+PUT {{baseUrl}}/api/reviews/{{myReview.response.body.$.id}}
+Content-Type: {{json}}
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+{
+    "rating": 5,
+    "comment": "Finalement : parfait, je recommande !"
+}
+
+### Erreur 409 : noter une deuxième fois le même logement
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/reviews
+Content-Type: {{json}}
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+{
+    "rating": 1,
+    "comment": "Deuxième avis"
+}
+
+### Erreur 403 : l'hôte note son propre logement
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/reviews
+Content-Type: {{json}}
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+{
+    "rating": 5,
+    "comment": "Mon logement est le meilleur"
+}
+
+### Erreur 403 : un autre utilisateur modifie l'avis
+PUT {{baseUrl}}/api/reviews/{{myReview.response.body.$.id}}
+Content-Type: {{json}}
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+{
+    "rating": 1,
+    "comment": "Piraté"
+}
+
+### Erreur 403 : un autre utilisateur supprime l'avis
+DELETE {{baseUrl}}/api/reviews/{{myReview.response.body.$.id}}
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+### Erreur 422 : note hors limites (1 à 5) et commentaire vide
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/reviews
+Content-Type: {{json}}
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+{
+    "rating": 9,
+    "comment": ""
+}
+
+### Erreur 401 : noter sans être connecté
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/reviews
+Content-Type: {{json}}
+Accept: {{json}}
+
+{
+    "rating": 4,
+    "comment": "Anonyme"
+}
+
+### Supprimer son avis → 204 (remet les données dans leur état initial)
+DELETE {{baseUrl}}/api/reviews/{{myReview.response.body.$.id}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
 
 
 ###############################################################################

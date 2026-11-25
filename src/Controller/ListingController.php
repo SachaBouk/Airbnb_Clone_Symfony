@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Repository\ListingRepository;
 use App\Repository\ReviewRepository;
 use App\Security\Voter\ListingVoter;
+use App\Serializer\ListingNormalizer;
 use App\Service\ListingManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,16 +25,30 @@ final class ListingController extends AbstractController
 {
     private const DETAIL_GROUPS = ['listing:read', 'user:public'];
 
+    /**
+     * Public. With a valid JWT, each listing also gets "myRating" (the user's own rating).
+     */
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(
         ListingRepository $listingRepository,
+        ReviewRepository $reviewRepository,
+        #[CurrentUser] ?User $user,
         #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
         ListingSearch $search = new ListingSearch(),
     ): JsonResponse {
-        return $this->json(
-            $listingRepository->search($search),
-            context: ['groups' => ['paginate', 'listing:list', 'user:public']],
-        );
+        $page = $listingRepository->search($search);
+        $ids = array_map(static fn (Listing $listing) => $listing->getId(), $page->items);
+
+        // Computed once for the whole page, then added to each listing by ListingNormalizer.
+        $context = [
+            'groups' => ['paginate', 'listing:list', 'user:public'],
+            ListingNormalizer::STATS => $reviewRepository->statsForListings($ids),
+        ];
+        if (null !== $user) {
+            $context[ListingNormalizer::MY_RATINGS] = $reviewRepository->ratingsByAuthor($user, $ids);
+        }
+
+        return $this->json($page, context: $context);
     }
 
     #[Route('/{id}', name: 'show', requirements: ['id' => '\d+'], methods: ['GET'])]

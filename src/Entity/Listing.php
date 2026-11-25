@@ -14,13 +14,13 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: ListingRepository::class)]
 class Listing
 {
-    #[Groups(['listing:list', 'listing:read'])]
+    #[Groups(['listing:list', 'listing:read', 'review:feed'])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[Groups(['listing:list', 'listing:read'])]
+    #[Groups(['listing:list', 'listing:read', 'review:feed'])]
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
     #[Assert\Length(max: 255)]

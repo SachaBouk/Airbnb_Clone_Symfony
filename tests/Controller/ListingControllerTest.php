@@ -50,6 +50,66 @@ final class ListingControllerTest extends WebTestCase
         self::assertStringNotContainsString('host@example.com', $this->client->getResponse()->getContent());
     }
 
+    public function testListIncludesAverageRatingAndReviewCount(): void
+    {
+        $host = $this->createUser('host@example.com', 'Hélène');
+        $rated = $this->createListing($host, 'Paris', 2, '80.00');
+        $this->createListing($host, 'Lyon', 2, '80.00');
+        $this->createReview($rated, $this->createUser('a@example.com', 'Ana'), 5);
+        $this->createReview($rated, $this->createUser('b@example.com', 'Ben'), 4);
+        $this->em->flush();
+
+        $this->client->request('GET', '/api/listings');
+
+        [$paris, $lyon] = $this->json()['items'];
+        self::assertSame(4.5, $paris['averageRating']);
+        self::assertSame(2, $paris['reviewCount']);
+        self::assertNull($lyon['averageRating']);
+        self::assertSame(0, $lyon['reviewCount']);
+    }
+
+    public function testListShowsMyRatingOnlyWhenLoggedIn(): void
+    {
+        $host = $this->createUser('host@example.com', 'Hélène');
+        $me = $this->createUser('me@example.com', 'Moi');
+        $rated = $this->createListing($host, 'Paris', 2, '80.00');
+        $this->createListing($host, 'Lyon', 2, '80.00');
+        $this->createReview($rated, $me, 3);
+        $this->createReview($rated, $this->createUser('other@example.com', 'Omar'), 5);
+        $this->em->flush();
+
+        $this->sendJson('GET', '/api/listings', as: $me);
+        [$paris, $lyon] = $this->json()['items'];
+        self::assertSame(3, $paris['myRating']);
+        self::assertNull($lyon['myRating']);
+
+        $this->client->request('GET', '/api/listings');
+        self::assertArrayNotHasKey('myRating', $this->json()['items'][0]);
+    }
+
+    public function testListSortsByRatingThenPrice(): void
+    {
+        $host = $this->createUser('host@example.com', 'Hélène');
+        $unrated = $this->createListing($host, 'Paris', 2, '300.00');
+        $good = $this->createListing($host, 'Lyon', 2, '100.00');
+        $best = $this->createListing($host, 'Nice', 2, '200.00');
+        $this->createReview($good, $this->createUser('a@example.com', 'Ana'), 3);
+        $this->createReview($best, $this->createUser('b@example.com', 'Ben'), 5);
+        $this->em->flush();
+
+        $this->client->request('GET', '/api/listings?sort=rating');
+        self::assertSame([$best->getId(), $good->getId(), $unrated->getId()], array_column($this->json()['items'], 'id'));
+
+        $this->client->request('GET', '/api/listings?sort=price_asc');
+        self::assertSame([$good->getId(), $best->getId(), $unrated->getId()], array_column($this->json()['items'], 'id'));
+
+        $this->client->request('GET', '/api/listings?sort=price_desc');
+        self::assertSame([$unrated->getId(), $best->getId(), $good->getId()], array_column($this->json()['items'], 'id'));
+
+        $this->client->request('GET', '/api/listings?sort=popularity');
+        self::assertResponseStatusCodeSame(422);
+    }
+
     public function testListFiltersByCityGuestsAndMaxPrice(): void
     {
         $host = $this->createUser('host@example.com', 'Hélène');
@@ -79,10 +139,10 @@ final class ListingControllerTest extends WebTestCase
     public function testShowReturnsListingWithReviewsAndAverageRating(): void
     {
         $host = $this->createUser('host@example.com', 'Hélène');
-        $traveler = $this->createUser('traveler@example.com', 'Victor');
         $listing = $this->createListing($host, 'Paris', 2, '80.00');
-        $this->createReview($listing, $traveler, 5);
-        $this->createReview($listing, $traveler, 4);
+        // One review per traveler per listing: two travelers.
+        $this->createReview($listing, $this->createUser('traveler@example.com', 'Victor'), 5);
+        $this->createReview($listing, $this->createUser('other@example.com', 'Omar'), 4);
         $this->em->flush();
 
         $this->client->request('GET', '/api/listings/'.$listing->getId());

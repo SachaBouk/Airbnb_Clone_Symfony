@@ -8,7 +8,11 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
+/**
+ * A rating (1 to 5 stars, like Airbnb) + comment left by a traveler on a listing he stayed at.
+ */
 #[ORM\Entity(repositoryClass: ReviewRepository::class)]
+#[ORM\UniqueConstraint(name: 'UNIQ_REVIEW_AUTHOR_LISTING', fields: ['author', 'listing'])]
 class Review
 {
     #[Groups(['review:read'])]
@@ -39,6 +43,7 @@ class Review
     #[Assert\NotNull]
     private ?User $author = null;
 
+    #[Groups(['review:feed'])]
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull]
