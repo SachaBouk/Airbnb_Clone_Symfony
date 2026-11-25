@@ -23,9 +23,9 @@ final class UserController extends AbstractController
     /**
      * Returns the user identified by the JWT sent in "Authorization: Bearer <token>".
      */
-    #[Route('/user', name: 'app_user_example', methods: ['GET'])]
+    #[Route('/user', name: 'app_users_me', methods: ['GET'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
-    public function user(#[CurrentUser] ?User $user): JsonResponse
+    public function me(#[CurrentUser] ?User $user): JsonResponse
     {
         return $this->json($user, context: ['groups' => ['user:read', 'all:read']]);
     }
