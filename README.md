@@ -21,7 +21,7 @@ des voyageurs les réservent, les notent et suivent d'autres utilisateurs.
 - PHP 8.4, Symfony 8.1
 - Doctrine ORM + migrations, base **SQLite** (fichier `var/data_dev.db`, aucun serveur de base de données à lancer)
 - Authentification **JWT** (LexikJWTAuthenticationBundle)
-- Serializer, Validator, Security (voters), Lock (pas de double réservation simultanée), CORS (NelmioCorsBundle)
+- Serializer, Validator, Security (voters), Lock (pas de double réservation simultanée), Mime (type réel des fichiers envoyés), CORS (NelmioCorsBundle)
 - Dev : MakerBundle, DoctrineFixturesBundle + Faker, PHPUnit, PHP CS Fixer
 
 ## Installation
@@ -71,7 +71,7 @@ Créés par les fixtures, mot de passe **`password`** pour tous :
 | `host@example.com` | Hôte du premier logement de la liste (qui a des réservations) |
 | `traveler@example.com` | Voyageur : a terminé un séjour dans ce premier logement sans le noter, et suit des auteurs d'avis |
 
-Les fixtures créent aussi 28 autres utilisateurs, 25 logements, 12 équipements, des réservations, des avis et des abonnements.
+Les fixtures créent aussi 28 autres utilisateurs, 25 logements avec de vraies photos (copiées depuis `data/photos/`), 12 équipements, des réservations, des avis et des abonnements.
 Elles **vident la base** avant de la remplir.
 
 ## Utiliser l'API
@@ -130,6 +130,9 @@ Les listes acceptent `?page=` (1 par défaut) et `?limit=` (20 par défaut, 50 m
 | PUT | `/api/listings/{id}` | hôte | Modifier un logement (remplacement complet) |
 | DELETE | `/api/listings/{id}` | hôte | Supprimer un logement (`409` s'il a des réservations ou des avis) |
 | GET | `/api/amenities` | public | Équipements disponibles (ids et slugs) |
+| POST | `/api/listings/{id}/photos` | hôte | Ajouter une photo (multipart, champ `photo`) |
+| POST | `/api/photos/{id}/cover` | hôte | Faire de cette photo la couverture |
+| DELETE | `/api/photos/{id}` | hôte | Supprimer une photo et son fichier |
 | POST | `/api/listings/{id}/bookings` | connecté, sauf l'hôte | Réserver (`409` si les dates sont prises) |
 | GET | `/api/bookings` | connecté | Mes voyages |
 | GET | `/api/listings/{id}/bookings` | hôte | Réservations d'un de mes logements |
@@ -183,7 +186,8 @@ Exemple : `GET /api/listings?title=appartement&amenity=wifi&sort=rating&page=1&l
 | Entité | Rôle | Relations |
 | --- | --- | --- |
 | `User` | Hôte et/ou voyageur | **OneToMany** `listings` (logements hébergés) et `reviews` (avis écrits) ; **ManyToMany sur elle-même** `following` / `followers` (table `user_follow`) |
-| `Listing` | Logement | ManyToOne `host` ; **ManyToMany** `amenities` (table `listing_amenity`) |
+| `Listing` | Logement | ManyToOne `host` ; **ManyToMany** `amenities` (table `listing_amenity`) ; OneToMany `photos` |
+| `Photo` | Photo d'un logement (nom du fichier, position dans la galerie) | ManyToOne `listing` |
 | `Amenity` | Équipement (Wi-Fi, piscine…) | ManyToMany `listings` |
 | `Booking` | Réservation, statut `pending` / `confirmed` / `cancelled` (enum `BookingStatus`) | ManyToOne `traveler`, `listing` |
 | `Review` | Avis noté de 1 à 5, unique par (auteur, logement) | ManyToOne `author`, `listing` |
@@ -192,6 +196,25 @@ Toutes les entités ont des dates `createdAt` / `updatedAt` remplies automatique
 
 Le schéma évolue uniquement par migrations : `php bin/console make:migration` puis
 `php bin/console doctrine:migrations:migrate`.
+
+## Photos des logements
+
+L'hôte envoie ses photos une par une en `multipart/form-data` (champ `photo`) :
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/listings/1/photos \
+     -H "Authorization: Bearer <token>" -F "photo=@data/photos/villa/villa-01.jpg"
+```
+
+- Formats acceptés : JPEG, PNG, WebP ; 5 Mo maximum ; 10 photos maximum par logement.
+  Le type est vérifié d'après le contenu réel du fichier, pas d'après son nom.
+- Les fichiers sont enregistrés dans `public/uploads/listings/` sous un nom aléatoire (dossier non versionné) et servis
+  directement par le serveur web : `GET /uploads/listings/<nom>.jpg`. Le dossier est un paramètre
+  (`app.photo_directory` dans `config/services.yaml`) ; les tests écrivent dans `var/test-uploads/`.
+- La réponse d'un logement contient `coverUrl` (première photo) et, dans le détail, `photos` (`[{ id, url }]`).
+- Supprimer une photo, ou le logement entier, supprime aussi les fichiers du disque.
+- `doctrine:fixtures:load` vide aussi `public/uploads/listings/` avant de copier les photos d'exemple de `data/photos/`
+  (un dossier par type de logement : `villa/`, `chalet/`, `house/`, `apartment/`, `loft/`, plus `interior/` pour les galeries).
 
 ## Importer des logements
 
@@ -216,7 +239,7 @@ Le fichier contient **un logement par ligne** au format JSON (voir [`data/listin
 ## Tests et qualité du code
 
 ```bash
-php bin/phpunit                      # 79 tests fonctionnels (HTTP) et d'intégration, base SQLite de test recréée à chaque test
+php bin/phpunit                      # 88 tests fonctionnels (HTTP) et d'intégration, base SQLite de test recréée à chaque test
 vendor/bin/php-cs-fixer fix          # normes de code Symfony (@Symfony)
 php bin/console lint:container       # vérifie la configuration des services
 ```
@@ -226,18 +249,18 @@ php bin/console lint:container       # vérifie la configuration des services
 ```
 src/
 ├── Command/         Commande console app:import-listings
-├── Controller/      Contrôleurs fins : une ressource par contrôleur (Listing, Booking, Review, User, Amenity, Health)
+├── Controller/      Contrôleurs fins : une ressource par contrôleur (Listing, Photo, Booking, Review, User, Amenity, Health)
 ├── DataFixtures/    Données de test (Faker)
 ├── Doctrine/        Middleware activant les clés étrangères de SQLite
 ├── Entity/          Entités Doctrine (+ Trait/TimestampableTrait)
 ├── Enum/            BookingStatus
-├── EventListener/   Ajoute ttl et user à la réponse du login
+├── EventListener/   Ajoute ttl et user à la réponse du login ; supprime le fichier d'une photo supprimée
 ├── Model/           DTO des requêtes (ListingInput, ListingSearch, BookingInput, ReviewInput, PaginationDTO…) et Paginator
 ├── Repository/      Requêtes Doctrine (recherche, fils, statistiques d'avis)
-├── Security/Voter/  Droits : ListingVoter (hôte, noter, réserver), ReviewVoter (auteur), BookingVoter (voyageur / hôte)
+├── Security/Voter/  Droits : ListingVoter (hôte, noter, réserver), ReviewVoter (auteur), BookingVoter (voyageur / hôte), PhotoVoter (hôte)
 ├── Serializer/      ListingNormalizer : ajoute averageRating, reviewCount et myRating
-└── Service/         Logique métier : ListingManager, ReviewManager, BookingManager, FollowManager, ListingImporter
+└── Service/         Logique métier : ListingManager, ReviewManager, BookingManager, PhotoManager + PhotoStorage, FollowManager, ListingImporter
 tests/               Tests PHPUnit (Controller, Entity, Command)
 api.http             Toutes les routes, prêtes à être exécutées
-data/                Fichier d'exemple pour l'import
+data/                Fichier d'exemple pour l'import ; photos/ : photos libres (Unsplash) des fixtures et d'api.http
 ```

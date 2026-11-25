@@ -13,7 +13,7 @@ npm install
 npm run dev        # http://127.0.0.1:5173
 ```
 
-Vite redirige les appels `/api/*` vers l'API Symfony (`vite.config.ts`) : aucune configuration CORS n'est nécessaire.
+Vite redirige les appels `/api/*` et les photos `/uploads/*` vers l'API Symfony (`vite.config.ts`) : aucune configuration CORS n'est nécessaire.
 
 `npm run build` vérifie les types (TypeScript) et produit la version de production dans `dist/`.
 
@@ -24,7 +24,7 @@ Vite redirige les appels `/api/*` vers l'API Symfony (`vite.config.ts`) : aucune
 | `/` | Recherche (ville, dates, voyageurs), catégories d'équipements, filtres (tri, prix max, mot-clé), grille paginée « Afficher plus » | `GET /api/listings`, `GET /api/amenities` |
 | `/listings/:id` | Galerie, hôte (bouton Suivre), équipements, carte de réservation, avis (publier, modifier, supprimer) ; pour l'hôte : modifier / supprimer, confirmer ou annuler les réservations | `GET /api/listings/{id}`, `/bookings`, `/reviews`, `/users/{id}/follow` |
 | `/trips` | Mes voyages : statut de chaque réservation, annulation avant l'arrivée | `GET /api/bookings`, `POST /api/bookings/{id}/cancel` |
-| `/host/listings/new`, `/host/listings/:id/edit` | Créer / modifier un logement (erreurs affichées sous chaque champ) | `POST` / `PUT /api/listings` |
+| `/host/listings/new`, `/host/listings/:id/edit` | Créer / modifier un logement (erreurs sous chaque champ) ; en modification, gérer les photos (envoi multiple, couverture, suppression) | `POST` / `PUT /api/listings`, `/api/listings/{id}/photos`, `/api/photos/{id}` |
 | `/feed` | Fil des avis des personnes suivies, ou de tout le monde | `GET /api/feed`, `GET /api/reviews` |
 | `/account` | Profil, abonnements et abonnés | `GET /api/user`, `/users/{id}/following`, `/followers` |
 
@@ -34,8 +34,8 @@ Le token JWT est gardé dans le `localStorage` ; à son expiration (1 h), l'util
 
 ## Limites connues
 
-- **Photos** : l'API ne stocke pas d'images ; chaque logement reçoit des photos fixes tirées d'une liste
-  de photos libres Unsplash (`src/utils/images.ts`).
+- **Photos** : un logement sans photo envoyée par son hôte affiche des photos de remplacement tirées d'une liste
+  de photos libres Unsplash, choisies selon le type de logement (`src/utils/images.ts`).
 - **Favoris** (cœur sur les cartes) : enregistrés dans le navigateur uniquement.
 
 ## Organisation

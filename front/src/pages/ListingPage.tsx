@@ -11,7 +11,7 @@ import { FollowButton } from '../components/FollowButton';
 import { HostBookings } from '../components/HostBookings';
 import { ReviewsSection } from '../components/ReviewsSection';
 import { formatMonthYear, formatRating, plural } from '../utils/format';
-import { listingPhoto } from '../utils/images';
+import { galleryPhotos } from '../utils/images';
 
 export function ListingPage() {
   const { id } = useParams();
@@ -44,6 +44,7 @@ export function ListingPage() {
 
   const { listing, averageRating, reviewCount, reviews } = data;
   const isHost = user?.id === listing.host.id;
+  const photos = galleryPhotos(listing);
 
   async function deleteListing() {
     if (!window.confirm('Supprimer définitivement ce logement ?')) {
@@ -76,9 +77,9 @@ export function ListingPage() {
         </div>
       </div>
 
-      <div className="gallery">
-        {[0, 1, 2, 3, 4].map((index) => (
-          <img key={index} src={listingPhoto(listing, index, index === 0 ? 1200 : 600, index === 0 ? 900 : 450)} alt="" />
+      <div className={`gallery gallery--${photos.length}`}>
+        {photos.map((url, index) => (
+          <img key={url} src={url} alt={index === 0 ? listing.title : ''} />
         ))}
       </div>
 

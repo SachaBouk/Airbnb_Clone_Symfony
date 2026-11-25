@@ -3,7 +3,7 @@ import type { MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { ListingSummary } from '../api/types';
 import { formatPrice, formatRating, plural } from '../utils/format';
-import { listingPhoto } from '../utils/images';
+import { listingCover } from '../utils/images';
 
 interface ListingCardProps {
   listing: ListingSummary;
@@ -25,7 +25,7 @@ export function ListingCard({ listing, isFavorite, onToggleFavorite }: ListingCa
   return (
     <Link to={`/listings/${listing.id}`} className="listing-card">
       <div className="listing-card__photo">
-        <img src={listingPhoto(listing)} alt={listing.title} loading="lazy" />
+        <img src={listingCover(listing)} alt={listing.title} loading="lazy" />
         {isGuestFavorite && <span className="listing-card__badge">Coup de cœur voyageurs</span>}
         <button
           type="button"

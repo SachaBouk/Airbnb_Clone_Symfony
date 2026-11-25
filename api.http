@@ -420,6 +420,92 @@ Authorization: Bearer {{loginTraveler.response.body.$.token}}
 
 
 ###############################################################################
+# PHOTOS (envoi de fichier, multipart/form-data, champ "photo")
+# Exécuter "listings" et "loginHost" avant, puis dans l'ordre.
+# JPEG, PNG ou WebP, 5 Mo max, 10 photos max par logement ; la première est la couverture.
+###############################################################################
+
+### L'hôte ajoute une photo à son logement → 201 { id, url }
+# @name photo1
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/photos
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+Content-Type: multipart/form-data; boundary=EscaleBoundary
+
+--EscaleBoundary
+Content-Disposition: form-data; name="photo"; filename="villa.jpg"
+Content-Type: image/jpeg
+
+< ./data/photos/villa/villa-01.jpg
+--EscaleBoundary--
+
+### Deuxième photo
+# @name photo2
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/photos
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+Content-Type: multipart/form-data; boundary=EscaleBoundary
+
+--EscaleBoundary
+Content-Disposition: form-data; name="photo"; filename="villa.jpg"
+Content-Type: image/jpeg
+
+< ./data/photos/villa/villa-01.jpg
+--EscaleBoundary--
+
+### La photo est servie directement par le serveur web
+GET {{baseUrl}}{{photo1.response.body.$.url}}
+
+### Le logement affiche ses photos ("photos") et sa couverture ("coverUrl")
+GET {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}
+Accept: {{json}}
+
+### La deuxième photo devient la couverture → renvoie les photos dans le nouvel ordre
+POST {{baseUrl}}/api/photos/{{photo2.response.body.$.id}}/cover
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+### Erreur 422 : un fichier qui n'est pas une image
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/photos
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+Content-Type: multipart/form-data; boundary=EscaleBoundary
+
+--EscaleBoundary
+Content-Disposition: form-data; name="photo"; filename="README.md"
+Content-Type: text/markdown
+
+< ./README.md
+--EscaleBoundary--
+
+### Erreur 422 : aucun fichier envoyé
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/photos
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+### Erreur 403 : un voyageur ajoute une photo au logement d'un autre
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/photos
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+Content-Type: multipart/form-data; boundary=EscaleBoundary
+
+--EscaleBoundary
+Content-Disposition: form-data; name="photo"; filename="villa.jpg"
+Content-Type: image/jpeg
+
+< ./data/photos/villa/villa-01.jpg
+--EscaleBoundary--
+
+### Supprimer les photos (et leurs fichiers) → 204
+DELETE {{baseUrl}}/api/photos/{{photo1.response.body.$.id}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+###
+DELETE {{baseUrl}}/api/photos/{{photo2.response.body.$.id}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+
+###############################################################################
 # LISTING — création, modification, suppression (connecté)
 # Exécuter "amenities", "listings" et "loginHost" avant, puis dans l'ordre.
 ###############################################################################

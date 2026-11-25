@@ -6,7 +6,7 @@ import type { Page, Review } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { formatMonthYear } from '../utils/format';
-import { listingPhoto } from '../utils/images';
+import { listingCover } from '../utils/images';
 
 type Tab = 'following' | 'all';
 
@@ -93,7 +93,7 @@ export function FeedPage() {
             <p className="review__comment">{review.comment}</p>
             {review.listing && (
               <Link to={`/listings/${review.listing.id}`} className="feed-item__listing">
-                <img src={listingPhoto(review.listing, 0, 160, 160)} alt="" />
+                <img src={listingCover(review.listing, 160, 160)} alt="" />
                 <span>{review.listing.title}</span>
               </Link>
             )}

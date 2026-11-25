@@ -5,9 +5,11 @@ namespace App\DataFixtures;
 use App\Entity\Amenity;
 use App\Entity\Booking;
 use App\Entity\Listing;
+use App\Entity\Photo;
 use App\Entity\Review;
 use App\Entity\User;
 use App\Enum\BookingStatus;
+use App\Service\PhotoStorage;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Faker\Factory;
@@ -42,6 +44,8 @@ class AppFixtures extends Fixture
 
     public function __construct(
         private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly PhotoStorage $photoStorage,
+        private readonly PhotoLibrary $photoLibrary,
     ) {
     }
 
@@ -49,6 +53,8 @@ class AppFixtures extends Fixture
     {
         $faker = Factory::create('fr_FR');
         $faker->seed(2026);
+        // The purge empties the photo table without touching the disk: remove the old files too.
+        $this->photoStorage->clear();
         $this->reviewers = [];
 
         $hashedPassword = $this->passwordHasher->hashPassword(new User(), self::PASSWORD);
@@ -149,6 +155,13 @@ class AppFixtures extends Fixture
             ->setMaxGuests($faker->numberBetween(1, 8))
             ->setHost($host)
             ->replaceAmenities($listingAmenities);
+
+        // Real photos copied from data/photos/: a cover matching the type, then a few interiors.
+        foreach ($this->photoLibrary->photosFor($faker, $type, $faker->numberBetween(2, 4)) as $position => $path) {
+            $photo = (new Photo())->setFilename($this->photoStorage->copy($path))->setPosition($position);
+            $listing->addPhoto($photo);
+            $manager->persist($photo);
+        }
 
         $manager->persist($listing);
 

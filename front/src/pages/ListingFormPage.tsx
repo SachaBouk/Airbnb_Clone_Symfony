@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, ApiError } from '../api/client';
-import type { Amenity, ListingDetail, ListingDetailResponse, ListingInput } from '../api/types';
+import type { Amenity, ListingDetail, ListingDetailResponse, ListingInput, Photo } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { AmenityIcon } from '../components/AmenityIcon';
+import { PhotosEditor } from '../components/PhotosEditor';
 
 const EMPTY_FORM = { title: '', description: '', priceByNight: '', city: '', country: '', maxGuests: '2', amenityIds: [] as number[] };
 
@@ -19,6 +20,9 @@ export function ListingFormPage() {
   const [error, setError] = useState<ApiError | null>(null);
   const [isSubmitting, setSubmitting] = useState(false);
   const [notAllowed, setNotAllowed] = useState(false);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [searchParams] = useSearchParams();
+  const isJustCreated = searchParams.has('photos');
 
   useEffect(() => {
     api<Amenity[]>('/amenities').then(setAmenities);
@@ -35,6 +39,7 @@ export function ListingFormPage() {
         return;
       }
       setForm(toForm(listing));
+      setPhotos(listing.photos);
     });
   }, [id, user]);
 
@@ -78,7 +83,8 @@ export function ListingFormPage() {
     };
     try {
       const saved = await api<ListingDetail>(id ? `/listings/${id}` : '/listings', { method: id ? 'PUT' : 'POST', body });
-      navigate(`/listings/${saved.id}`);
+      // A new listing has no photo yet: continue on its edit page, photos section.
+      navigate(id ? `/listings/${saved.id}` : `/host/listings/${saved.id}/edit?photos#photos`);
     } catch (exception) {
       setError(exception instanceof ApiError ? exception : new ApiError(0, 'Enregistrement impossible.'));
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -93,6 +99,14 @@ export function ListingFormPage() {
     <main className="container narrow">
       <h1 className="page-title">{id ? 'Modifier votre logement' : 'Mettez votre logement en location'}</h1>
       {error && !error.violations.length && <p className="form-error">{error.message}</p>}
+
+      {id && (
+        <section className="listing-form__photos" id="photos">
+          <h2>Ajoutez des photos de votre logement</h2>
+          {isJustCreated && <p className="notice">Votre annonce est publiée ! Ajoutez maintenant quelques photos pour donner envie aux voyageurs.</p>}
+          <PhotosEditor listingId={Number(id)} photos={photos} onChange={setPhotos} />
+        </section>
+      )}
 
       <form onSubmit={handleSubmit} className="listing-form">
         <section>

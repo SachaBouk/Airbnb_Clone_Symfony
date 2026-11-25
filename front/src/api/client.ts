@@ -52,14 +52,16 @@ interface RequestOptions {
 
 export async function api<T>(path: string, { method = 'GET', body }: RequestOptions = {}): Promise<T> {
   const sentToken = token;
+  // FormData (file upload) is sent as-is: the browser sets the multipart Content-Type itself.
+  const isFormData = body instanceof FormData;
   const response = await fetch(`/api${path}`, {
     method,
     headers: {
       Accept: 'application/json',
-      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(body !== undefined && !isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...(sentToken ? { Authorization: `Bearer ${sentToken}` } : {}),
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
   });
 
   if (response.status === 401 && sentToken) {

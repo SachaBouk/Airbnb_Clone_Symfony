@@ -1,7 +1,7 @@
 /**
- * The API stores no photos: each listing gets stable photos (same listing → same photos) from curated
+ * Listing photos. Photos uploaded by the host (served by the API under /uploads) always come first.
+ * A listing without uploads gets stable placeholder photos (same listing → same photos) from curated
  * free Unsplash pictures, chosen according to the kind of place its title describes.
- * Replace this file once listings have real images.
  */
 
 type Category = 'villa' | 'chalet' | 'house' | 'apartment' | 'loft';
@@ -68,10 +68,28 @@ function categoryOf(title: string): Category {
 interface PhotoSubject {
   id: number;
   title: string;
+  /** Uploaded cover, if any. */
+  coverUrl?: string | null;
 }
 
-/** Photo n°index of a listing: 0 = cover matching its kind of place, 1 to 4 = interiors. */
-export function listingPhoto(listing: PhotoSubject, index = 0, width = 720, height = 680): string {
+/** Cover of a listing: the uploaded one, otherwise a placeholder. */
+export function listingCover(listing: PhotoSubject, width = 720, height = 680): string {
+  return listing.coverUrl ?? placeholderPhoto(listing, 0, width, height);
+}
+
+/**
+ * Up to 5 photos for the gallery: the uploaded ones when there are any, otherwise 5 placeholders.
+ */
+export function galleryPhotos(listing: PhotoSubject & { photos: { url: string }[] }): string[] {
+  if (listing.photos.length > 0) {
+    return listing.photos.slice(0, 5).map((photo) => photo.url);
+  }
+
+  return [0, 1, 2, 3, 4].map((index) => placeholderPhoto(listing, index, index === 0 ? 1200 : 600, index === 0 ? 900 : 450));
+}
+
+/** Placeholder n°index of a listing: 0 = cover matching its kind of place, 1 to 4 = interiors. */
+function placeholderPhoto(listing: PhotoSubject, index: number, width: number, height: number): string {
   const cover = pick(COVERS[categoryOf(listing.title)], listing.id);
   let photoId = cover;
 

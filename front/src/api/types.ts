@@ -12,6 +12,19 @@ export interface Me extends UserPublic {
   roles: string[];
 }
 
+export interface Photo {
+  id: number;
+  /** Relative URL, e.g. "/uploads/listings/3f9a….jpg". */
+  url: string;
+}
+
+/** The short form of a listing embedded in bookings and reviews. */
+export interface ListingRef {
+  id: number;
+  title: string;
+  coverUrl: string | null;
+}
+
 export interface Amenity {
   id: number;
   name: string;
@@ -28,6 +41,8 @@ export interface ListingSummary {
   maxGuests: number;
   host: UserPublic;
   amenities: Amenity[];
+  /** First uploaded photo, or null when the host has not uploaded any yet. */
+  coverUrl: string | null;
   averageRating: number | null;
   reviewCount: number;
   /** Present only when logged in: my own rating, or null. */
@@ -44,6 +59,9 @@ export interface ListingDetail {
   maxGuests: number;
   host: UserPublic;
   amenities: Amenity[];
+  coverUrl: string | null;
+  /** Gallery, cover first. */
+  photos: Photo[];
   createdAt?: string | null;
 }
 
@@ -54,7 +72,7 @@ export interface Review {
   createdAt: string;
   updatedAt?: string | null;
   author: UserPublic;
-  listing?: { id: number; title: string };
+  listing?: ListingRef;
 }
 
 export interface ListingDetailResponse {
@@ -104,7 +122,7 @@ export interface Booking {
   totalPrice: string;
   status: BookingStatus;
   traveler: UserPublic;
-  listing: { id: number; title: string; city: string; country: string };
+  listing: ListingRef & { city: string; country: string };
 }
 
 export interface BookingInput {

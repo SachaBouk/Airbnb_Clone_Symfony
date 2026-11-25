@@ -6,7 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import { BookingStatusBadge, isCancellable } from '../components/BookingStatusBadge';
 import { formatStay } from '../components/HostBookings';
 import { formatPrice, plural } from '../utils/format';
-import { listingPhoto } from '../utils/images';
+import { listingCover } from '../utils/images';
 
 /** The trips of the logged-in user (GET /api/bookings), with cancellation. */
 export function TripsPage() {
@@ -61,7 +61,7 @@ export function TripsPage() {
         {bookings?.map((booking) => (
           <article key={booking.id} className="trip">
             <Link to={`/listings/${booking.listing.id}`} className="trip__photo">
-              <img src={listingPhoto(booking.listing, 0, 320, 240)} alt="" />
+              <img src={listingCover(booking.listing, 320, 240)} alt="" />
             </Link>
             <div className="trip__body">
               <BookingStatusBadge status={booking.status} />
