@@ -5,7 +5,6 @@ namespace App\Model;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
-
 /**
  * Query string of GET /api/listings: filters + page/limit (inherited from PaginationDTO).
  */
@@ -17,7 +16,6 @@ final readonly class ListingSearch extends PaginationDTO
     public const SORTS = [self::SORT_RATING, self::SORT_PRICE_ASC, self::SORT_PRICE_DESC];
 
     public function __construct(
-
         #[Assert\Length(max: 255)]
         public ?string $title = null,
 
@@ -33,7 +31,6 @@ final readonly class ListingSearch extends PaginationDTO
         #[Assert\Positive]
         public ?float $maxPrice = null,
 
-        
         #[Assert\Length(max: 100)]
         public ?string $amenity = null,
 

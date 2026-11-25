@@ -2,10 +2,10 @@
 
 namespace App\Controller;
 
-use App\Model\ListingInput;
-use App\Model\ListingSearch;
 use App\Entity\Listing;
 use App\Entity\User;
+use App\Model\ListingInput;
+use App\Model\ListingSearch;
 use App\Repository\ListingRepository;
 use App\Repository\ReviewRepository;
 use App\Security\Voter\ListingVoter;
@@ -23,7 +23,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/api/listings', name: 'app_listings_', format: 'json')]
 final class ListingController extends AbstractController
 {
-    private const DETAIL_GROUPS = ['listing:read', 'user:public'];
+    private const DETAIL_GROUPS = ['listing:read', 'user:public', 'all:read'];
 
     /**
      * Public. With a valid JWT, each listing also gets "myRating" (the user's own rating).

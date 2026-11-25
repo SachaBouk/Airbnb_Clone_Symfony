@@ -24,8 +24,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/api', name: 'app_reviews_', format: 'json')]
 final class ReviewController extends AbstractController
 {
-    /** A review with its author (first name) and the listing it is about (id, title). */
-    private const GROUPS = ['review:read', 'review:feed', 'user:public'];
+    /** A review with its dates, its author (first name) and the listing it is about (id, title). */
+    private const GROUPS = ['review:read', 'review:feed', 'user:public', 'all:read'];
 
     /**
      * Feed of the latest reviews, all listings combined.
@@ -37,6 +37,22 @@ final class ReviewController extends AbstractController
         PaginationDTO $pagination = new PaginationDTO(),
     ): JsonResponse {
         $page = (new Paginator())->paginate($reviewRepository->feedQuery(), $pagination);
+
+        return $this->json($page, context: ['groups' => ['paginate', ...self::GROUPS]]);
+    }
+
+    /**
+     * Personal feed: latest reviews written by the users the logged-in user follows.
+     */
+    #[Route('/feed', name: 'following_feed', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function followingFeed(
+        ReviewRepository $reviewRepository,
+        #[CurrentUser] User $user,
+        #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
+        PaginationDTO $pagination = new PaginationDTO(),
+    ): JsonResponse {
+        $page = (new Paginator())->paginate($reviewRepository->followingFeedQuery($user), $pagination);
 
         return $this->json($page, context: ['groups' => ['paginate', ...self::GROUPS]]);
     }

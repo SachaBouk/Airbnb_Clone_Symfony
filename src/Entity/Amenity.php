@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\TimestampableTrait;
 use App\Repository\AmenityRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -9,11 +10,13 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
-
 #[ORM\Entity(repositoryClass: AmenityRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 #[ORM\UniqueConstraint(name: 'UNIQ_AMENITY_SLUG', fields: ['slug'])]
 class Amenity
 {
+    use TimestampableTrait;
+
     #[Groups(['amenity:read', 'listing:list', 'listing:read'])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -26,7 +29,6 @@ class Amenity
     #[Assert\Length(max: 100)]
     private ?string $name = null;
 
-    
     #[Groups(['amenity:read', 'listing:list', 'listing:read'])]
     #[ORM\Column(length: 100)]
     #[Assert\NotBlank]
@@ -81,7 +83,6 @@ class Amenity
         return $this->listings;
     }
 
-   
     public function addListing(Listing $listing): static
     {
         if (!$this->listings->contains($listing)) {

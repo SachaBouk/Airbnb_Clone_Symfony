@@ -205,6 +205,15 @@ Accept: {{json}}
 GET {{baseUrl}}/api/reviews?page=1&limit=10
 Accept: {{json}}
 
+### Mon fil : les avis des personnes que je suis (connecté)
+GET {{baseUrl}}/api/feed?page=1&limit=10
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+### Erreur 401 : mon fil sans être connecté
+GET {{baseUrl}}/api/feed
+Accept: {{json}}
+
 ### Le voyageur note le premier logement → 201
 # @name myReview
 POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/reviews

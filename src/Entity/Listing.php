@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\TimestampableTrait;
 use App\Repository\ListingRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -12,8 +13,11 @@ use Symfony\Component\Serializer\Attribute\SerializedName;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ListingRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Listing
 {
+    use TimestampableTrait;
+
     #[Groups(['listing:list', 'listing:read', 'review:feed'])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -31,7 +35,6 @@ class Listing
     #[Assert\NotBlank]
     private ?string $description = null;
 
-   
     #[Groups(['listing:list', 'listing:read'])]
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     #[Assert\NotBlank]
@@ -63,7 +66,6 @@ class Listing
     private ?User $host = null;
 
     /**
-     *
      * @var Collection<int, Amenity>
      */
     #[ORM\ManyToMany(targetEntity: Amenity::class, inversedBy: 'listings')]
@@ -89,7 +91,6 @@ class Listing
     }
 
     /**
-     *
      * @return list<Amenity>
      */
     #[Groups(['listing:list', 'listing:read'])]

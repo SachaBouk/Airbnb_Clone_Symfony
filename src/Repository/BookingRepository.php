@@ -6,10 +6,9 @@ use App\Entity\Booking;
 use App\Entity\Listing;
 use App\Entity\User;
 use App\Enum\BookingStatus;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
-
 
 class BookingRepository extends ServiceEntityRepository
 {

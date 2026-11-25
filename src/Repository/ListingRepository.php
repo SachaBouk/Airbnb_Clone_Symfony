@@ -2,16 +2,15 @@
 
 namespace App\Repository;
 
-use App\Model\ListingSearch;
-use App\Model\Paginator;
 use App\Entity\Booking;
 use App\Entity\Listing;
 use App\Entity\Review;
 use App\Enum\BookingStatus;
-use Doctrine\DBAL\Types\Types;
+use App\Model\ListingSearch;
+use App\Model\Paginator;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
-
 
 class ListingRepository extends ServiceEntityRepository
 {
@@ -60,14 +59,12 @@ class ListingRepository extends ServiceEntityRepository
             $qb->andWhere('l.priceByNight <= :maxPrice')->setParameter('maxPrice', $search->maxPrice);
         }
         if (null !== $search->amenity) {
-
             $qb->andWhere(\sprintf(
                 'EXISTS (SELECT 1 FROM %s fl JOIN fl.amenities fa WHERE fl = l AND fa.slug = :amenity)',
                 Listing::class,
             ))->setParameter('amenity', $search->amenity);
         }
         if ($search->hasAvailabilityFilter()) {
-
             $qb->andWhere(\sprintf(
                 'NOT EXISTS (SELECT 1 FROM %s b WHERE b.listing = l AND b.status IN (:blockingStatuses)
                     AND b.arrivalDate < :availableTo AND b.departureDate > :availableFrom)',

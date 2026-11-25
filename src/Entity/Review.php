@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\TimestampableTrait;
 use App\Repository\ReviewRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -12,9 +13,12 @@ use Symfony\Component\Validator\Constraints as Assert;
  * A rating (1 to 5 stars, like Airbnb) + comment left by a traveler on a listing he stayed at.
  */
 #[ORM\Entity(repositoryClass: ReviewRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 #[ORM\UniqueConstraint(name: 'UNIQ_REVIEW_AUTHOR_LISTING', fields: ['author', 'listing'])]
 class Review
 {
+    use TimestampableTrait;
+
     #[Groups(['review:read'])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -34,10 +38,6 @@ class Review
     private ?string $comment = null;
 
     #[Groups(['review:read'])]
-    #[ORM\Column]
-    private \DateTimeImmutable $createdAt;
-
-    #[Groups(['review:read'])]
     #[ORM\ManyToOne(inversedBy: 'reviews')]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull]
@@ -48,11 +48,6 @@ class Review
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull]
     private ?Listing $listing = null;
-
-    public function __construct()
-    {
-        $this->createdAt = new \DateTimeImmutable();
-    }
 
     public function getId(): ?int
     {
@@ -81,11 +76,6 @@ class Review
         $this->comment = $comment;
 
         return $this;
-    }
-
-    public function getCreatedAt(): \DateTimeImmutable
-    {
-        return $this->createdAt;
     }
 
     public function getAuthor(): ?User

@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\TimestampableTrait;
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -12,9 +13,12 @@ use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
+    use TimestampableTrait;
+
     #[Groups(['user:public', 'user:read'])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -137,7 +141,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     *
      * @see UserInterface
      */
     public function getUserIdentifier(): string
@@ -182,7 +185,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    
     /**
      * @return Collection<int, Listing>
      */
@@ -245,8 +247,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function __serialize(): array
     {
         $data = (array) $this;
-        $data["\0" . self::class . "\0password"] = hash('crc32c', $this->password);
-        
+        $data["\0".self::class."\0password"] = hash('crc32c', $this->password);
+
         return $data;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\TimestampableTrait;
 use App\Enum\BookingStatus;
 use App\Repository\BookingRepository;
 use Doctrine\DBAL\Types\Types;
@@ -10,8 +11,11 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ORM\Entity(repositoryClass: BookingRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Booking
 {
+    use TimestampableTrait;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -31,7 +35,6 @@ class Booking
     #[Assert\Positive]
     private ?int $guests = null;
 
-    
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     #[Assert\NotBlank]
     #[Assert\PositiveOrZero]

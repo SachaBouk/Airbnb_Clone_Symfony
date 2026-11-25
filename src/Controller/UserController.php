@@ -27,7 +27,7 @@ final class UserController extends AbstractController
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function user(#[CurrentUser] ?User $user): JsonResponse
     {
-        return $this->json($user, context: ['groups' => ['user:read']]);
+        return $this->json($user, context: ['groups' => ['user:read', 'all:read']]);
     }
 
     /**

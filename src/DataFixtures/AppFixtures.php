@@ -42,6 +42,9 @@ class AppFixtures extends Fixture
         'Villa avec piscine', 'Chalet chaleureux', 'Duplex spacieux', 'Petite maison de ville',
     ];
 
+    /** @var list<User> travelers who wrote at least one review */
+    private array $reviewers = [];
+
     public function __construct(
         private readonly UserPasswordHasherInterface $passwordHasher,
     ) {
@@ -51,6 +54,7 @@ class AppFixtures extends Fixture
     {
         $faker = Factory::create('fr_FR');
         $faker->seed(2026);
+        $this->reviewers = [];
 
         $hashedPassword = $this->passwordHasher->hashPassword(new User(), self::PASSWORD);
 
@@ -80,11 +84,26 @@ class AppFixtures extends Fixture
             }
         }
 
-        // Self-referencing ManyToMany: travelers follow hosts, and hosts follow each other.
+        // Self-referencing ManyToMany: travelers follow hosts and other travelers, hosts follow each other.
         foreach ($travelers as $traveler) {
             foreach ($faker->randomElements($hosts, $faker->numberBetween(0, 3)) as $host) {
                 $traveler->follow($host);
             }
+            foreach ($faker->randomElements($travelers, $faker->numberBetween(0, 3)) as $otherTraveler) {
+                if ($otherTraveler !== $traveler) {
+                    $traveler->follow($otherTraveler);
+                }
+            }
+        }
+        // traveler@example.com follows some reviewers, so that GET /api/feed has content in api.http.
+        $reviewers = [];
+        foreach ($this->reviewers as $reviewer) {
+            if ($reviewer !== $travelers[0]) {
+                $reviewers[spl_object_id($reviewer)] = $reviewer;
+            }
+        }
+        foreach (\array_slice($reviewers, 0, 4) as $reviewer) {
+            $travelers[0]->follow($reviewer);
         }
         foreach ($hosts as $host) {
             foreach ($faker->randomElements($hosts, $faker->numberBetween(0, 2)) as $otherHost) {
@@ -189,6 +208,7 @@ class AppFixtures extends Fixture
 
             if ($isPast && BookingStatus::Confirmed === $status && !\in_array($traveler, $reviewed, true) && $faker->boolean(70)) {
                 $reviewed[] = $traveler;
+                $this->reviewers[] = $traveler;
                 $review = (new Review())
                     ->setRating($faker->biasedNumberBetween(1, 5, 'sqrt'))
                     ->setComment($faker->paragraph())

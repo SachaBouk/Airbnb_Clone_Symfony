@@ -9,7 +9,6 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
-
 class ReviewRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -58,6 +57,17 @@ class ReviewRepository extends ServiceEntityRepository
             ->join('r.listing', 'l')
             ->orderBy('r.createdAt', 'DESC')
             ->addOrderBy('r.id', 'DESC');
+    }
+
+    /**
+     * Latest reviews written by the users that $user follows (GET /api/feed).
+     */
+    public function followingFeedQuery(User $user): QueryBuilder
+    {
+        return $this->feedQuery()
+            ->join('a.followers', 'follower')
+            ->andWhere('follower = :user')
+            ->setParameter('user', $user);
     }
 
     /**

@@ -8,7 +8,6 @@ use Doctrine\DBAL\Driver\Connection;
 use Doctrine\DBAL\Driver\Middleware;
 use Doctrine\DBAL\Driver\Middleware\AbstractDriverMiddleware;
 
-
 #[AsMiddleware]
 final class SqliteForeignKeysMiddleware implements Middleware
 {

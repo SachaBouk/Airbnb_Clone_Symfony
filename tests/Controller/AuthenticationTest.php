@@ -3,9 +3,9 @@
 namespace App\Tests\Controller;
 
 use App\Entity\User;
+use App\Tests\ResetDatabaseTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use App\Tests\ResetDatabaseTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 

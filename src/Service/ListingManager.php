@@ -2,9 +2,9 @@
 
 namespace App\Service;
 
-use App\Model\ListingInput;
 use App\Entity\Listing;
 use App\Entity\User;
+use App\Model\ListingInput;
 use App\Repository\AmenityRepository;
 use App\Repository\BookingRepository;
 use App\Repository\ReviewRepository;

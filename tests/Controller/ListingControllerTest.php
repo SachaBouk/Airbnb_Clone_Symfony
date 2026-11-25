@@ -8,10 +8,10 @@ use App\Entity\Listing;
 use App\Entity\Review;
 use App\Entity\User;
 use App\Enum\BookingStatus;
+use App\Tests\ResetDatabaseTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use App\Tests\ResetDatabaseTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class ListingControllerTest extends WebTestCase
@@ -153,7 +153,9 @@ final class ListingControllerTest extends WebTestCase
         self::assertArrayHasKey('description', $data['listing']);
         self::assertSame(4.5, $data['averageRating']);
         self::assertSame(2, $data['reviewCount']);
-        self::assertSame(['id', 'firstName'], array_keys($data['reviews'][0]['author']));
+        // Public author data only (dates come from the "all:read" group): never the email.
+        self::assertSame(['id', 'firstName', 'createdAt', 'updatedAt'], array_keys($data['reviews'][0]['author']));
+        self::assertNotEmpty($data['reviews'][0]['createdAt']);
     }
 
     public function testShowReturnsNullAverageWhenNoReview(): void

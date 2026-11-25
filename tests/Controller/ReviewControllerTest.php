@@ -45,9 +45,13 @@ final class ReviewControllerTest extends WebTestCase
         $data = $this->json();
         self::assertSame(4, $data['rating']);
         self::assertSame('Très bon séjour', $data['comment']);
-        self::assertSame(['id' => $this->traveler->getId(), 'firstName' => 'Victor'], $data['author']);
-        self::assertSame(['id' => $this->listing->getId(), 'title' => 'Villa à Nice'], $data['listing']);
+        self::assertSame($this->traveler->getId(), $data['author']['id']);
+        self::assertSame('Victor', $data['author']['firstName']);
+        self::assertSame(['id', 'firstName', 'createdAt', 'updatedAt'], array_keys($data['author']));
+        self::assertSame($this->listing->getId(), $data['listing']['id']);
+        self::assertSame('Villa à Nice', $data['listing']['title']);
         self::assertNotEmpty($data['createdAt']);
+        self::assertSame($data['createdAt'], $data['updatedAt']);
     }
 
     public function testCannotReviewWithoutAStay(): void
@@ -159,11 +163,46 @@ final class ReviewControllerTest extends WebTestCase
         self::assertSame(3, $data['total']);
         self::assertSame(2, $data['lastPage']);
         self::assertSame([$newest->getId(), $middle->getId()], array_column($data['items'], 'id'));
-        self::assertSame(['id' => $this->listing->getId(), 'title' => 'Villa à Nice'], $data['items'][0]['listing']);
-        self::assertSame(['id', 'firstName'], array_keys($data['items'][0]['author']));
+        self::assertSame('Villa à Nice', $data['items'][0]['listing']['title']);
+        self::assertSame(['id', 'firstName', 'createdAt', 'updatedAt'], array_keys($data['items'][0]['author']));
 
         $this->send('GET', '/api/reviews?limit=2&page=2');
         self::assertSame([$old->getId()], array_column($this->json()['items'], 'id'));
+    }
+
+    public function testFollowingFeedShowsOnlyReviewsOfFollowedUsers(): void
+    {
+        $followed = $this->createUser('followed@example.com', 'Fanny');
+        $stranger = $this->createUser('stranger@example.com', 'Sam');
+        $this->traveler->follow($followed);
+        $this->em->flush();
+        $fromFollowed = $this->createReview($followed, 5);
+        $this->createReview($stranger, 1);
+
+        $this->send('GET', '/api/feed', as: $this->traveler);
+
+        self::assertResponseIsSuccessful();
+        $data = $this->json();
+        self::assertSame(1, $data['total']);
+        self::assertSame([$fromFollowed->getId()], array_column($data['items'], 'id'));
+        self::assertSame('Fanny', $data['items'][0]['author']['firstName']);
+    }
+
+    public function testFollowingFeedIsEmptyWhenFollowingNobody(): void
+    {
+        $this->createReview($this->createUser('someone@example.com', 'Sam'), 4);
+
+        $this->send('GET', '/api/feed', as: $this->traveler);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['total' => 0, 'lastPage' => 1, 'items' => []], $this->json());
+    }
+
+    public function testFollowingFeedRequiresAToken(): void
+    {
+        $this->send('GET', '/api/feed');
+
+        self::assertResponseStatusCodeSame(401);
     }
 
     private function reviewsUri(): string

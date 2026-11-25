@@ -10,7 +10,6 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/amenities', name: 'app_amenities_', format: 'json')]
 final class AmenityController extends AbstractController
 {
-    
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(AmenityRepository $amenityRepository): JsonResponse
     {
