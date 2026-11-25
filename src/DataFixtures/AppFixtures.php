@@ -37,11 +37,6 @@ class AppFixtures extends Fixture
         'balcony' => 'Balcon', 'sea-view' => 'Vue sur mer', 'fireplace' => 'Cheminée',
     ];
 
-    private const LISTING_TYPES = [
-        'Appartement lumineux', 'Studio cosy', 'Maison de charme', 'Loft moderne',
-        'Villa avec piscine', 'Chalet chaleureux', 'Duplex spacieux', 'Petite maison de ville',
-    ];
-
     /** @var list<User> travelers who wrote at least one review */
     private array $reviewers = [];
 
@@ -135,16 +130,25 @@ class AppFixtures extends Fixture
     private function createListing(ObjectManager $manager, Generator $faker, User $host, array $amenities): Listing
     {
         [$city, $country] = $faker->randomElement(self::CITIES);
+        $type = $faker->randomElement(ListingTexts::listingTypes());
+        $listingAmenities = $faker->randomElements($amenities, $faker->numberBetween(2, 6));
+        if (ListingTexts::TYPE_WITH_POOL === $type) {
+            $pool = current(array_filter($amenities, static fn (Amenity $amenity) => 'pool' === $amenity->getSlug()));
+            if (false !== $pool && !\in_array($pool, $listingAmenities, true)) {
+                $listingAmenities[] = $pool;
+            }
+        }
+        $amenityNames = array_map(static fn (Amenity $amenity) => $amenity->getName(), $listingAmenities);
 
         $listing = (new Listing())
-            ->setTitle(\sprintf('%s à %s', $faker->randomElement(self::LISTING_TYPES), $city))
-            ->setDescription($faker->paragraphs(3, true))
+            ->setTitle(\sprintf('%s à %s', $type, $city))
+            ->setDescription(ListingTexts::description($faker, $type, $city, $amenityNames))
             ->setPriceByNight(number_format($faker->numberBetween(35, 350), 2, '.', ''))
             ->setCity($city)
             ->setCountry($country)
             ->setMaxGuests($faker->numberBetween(1, 8))
             ->setHost($host)
-            ->replaceAmenities($faker->randomElements($amenities, $faker->numberBetween(2, 6)));
+            ->replaceAmenities($listingAmenities);
 
         $manager->persist($listing);
 
@@ -209,9 +213,10 @@ class AppFixtures extends Fixture
             if ($isPast && BookingStatus::Confirmed === $status && !\in_array($traveler, $reviewed, true) && $faker->boolean(70)) {
                 $reviewed[] = $traveler;
                 $this->reviewers[] = $traveler;
+                $rating = $faker->biasedNumberBetween(1, 5, 'sqrt');
                 $review = (new Review())
-                    ->setRating($faker->biasedNumberBetween(1, 5, 'sqrt'))
-                    ->setComment($faker->paragraph())
+                    ->setRating($rating)
+                    ->setComment(ListingTexts::review($faker, $rating, $listing->getHost()->getFirstName(), $listing->getCity()))
                     ->setAuthor($traveler)
                     ->setListing($listing);
 

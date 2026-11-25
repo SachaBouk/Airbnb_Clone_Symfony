@@ -21,7 +21,7 @@ des voyageurs les réservent, les notent et suivent d'autres utilisateurs.
 - PHP 8.4, Symfony 8.1
 - Doctrine ORM + migrations, base **SQLite** (fichier `var/data_dev.db`, aucun serveur de base de données à lancer)
 - Authentification **JWT** (LexikJWTAuthenticationBundle)
-- Serializer, Validator, Security (voters), CORS (NelmioCorsBundle)
+- Serializer, Validator, Security (voters), Lock (pas de double réservation simultanée), CORS (NelmioCorsBundle)
 - Dev : MakerBundle, DoctrineFixturesBundle + Faker, PHPUnit, PHP CS Fixer
 
 ## Installation
@@ -53,6 +53,14 @@ php -S 127.0.0.1:8000 -t public
 ```
 
 Vérification : `GET http://127.0.0.1:8000/api/health` doit répondre `{"status":"ok","database":"ok"}`.
+
+### Interface web (facultatif)
+
+Un front React qui consomme cette API se trouve dans [`front/`](front/README.md) :
+
+```bash
+cd front && npm install && npm run dev     # http://127.0.0.1:5173 (l'API doit tourner)
+```
 
 ## Comptes de test
 
@@ -87,10 +95,13 @@ Envoyer ensuite le token dans chaque requête qui l'exige : `Authorization: Bear
 
 ### Règles d'accès
 
-- **Lecture (`GET`) publique**, sauf `/api/user` et `/api/feed`.
+- **Lecture (`GET`) publique**, sauf `/api/user`, `/api/feed` et les réservations.
 - **Toute écriture (`POST`, `PUT`, `DELETE`) exige un token**, sinon `401`.
 - Seul **l'hôte** modifie ou supprime son logement, seul **l'auteur** modifie ou supprime son avis, sinon `403`.
 - Pour **noter** un logement, il faut y avoir terminé un séjour confirmé et ne pas en être l'hôte ; un seul avis par logement.
+- Pour **réserver**, il suffit d'être connecté et de ne pas être l'hôte. Une réservation est d'abord `pending` ;
+  seul l'hôte la confirme (`confirmed`). Le voyageur ou l'hôte peut l'annuler (`cancelled`) avant le jour d'arrivée.
+  Le prix total est toujours calculé par le serveur (nuits × prix par nuit).
 
 ### Pagination
 
@@ -103,7 +114,7 @@ Les listes acceptent `?page=` (1 par défaut) et `?limit=` (20 par défaut, 50 m
 ### Codes de réponse
 
 `200` OK · `201` créé (en-tête `Location`) · `204` sans contenu · `400` JSON mal formé · `401` non connecté ou token invalide ·
-`403` action interdite · `404` introuvable · `409` conflit (avis en double, logement avec réservations) ·
+`403` action interdite · `404` introuvable · `409` conflit (dates déjà réservées, avis en double, logement avec réservations, transition de statut impossible) ·
 `422` données invalides (détail champ par champ dans `violations`).
 
 ## Routes
@@ -119,6 +130,12 @@ Les listes acceptent `?page=` (1 par défaut) et `?limit=` (20 par défaut, 50 m
 | PUT | `/api/listings/{id}` | hôte | Modifier un logement (remplacement complet) |
 | DELETE | `/api/listings/{id}` | hôte | Supprimer un logement (`409` s'il a des réservations ou des avis) |
 | GET | `/api/amenities` | public | Équipements disponibles (ids et slugs) |
+| POST | `/api/listings/{id}/bookings` | connecté, sauf l'hôte | Réserver (`409` si les dates sont prises) |
+| GET | `/api/bookings` | connecté | Mes voyages |
+| GET | `/api/listings/{id}/bookings` | hôte | Réservations d'un de mes logements |
+| GET | `/api/bookings/{id}` | voyageur ou hôte | Détail d'une réservation |
+| POST | `/api/bookings/{id}/confirm` | hôte | Confirmer une réservation en attente |
+| POST | `/api/bookings/{id}/cancel` | voyageur ou hôte | Annuler avant l'arrivée |
 | GET | `/api/reviews` | public | Fil des derniers avis, tous logements |
 | GET | `/api/feed` | connecté | Fil des avis des personnes que je suis |
 | POST | `/api/listings/{id}/reviews` | voyageur ayant séjourné | Noter un logement (1 à 5) |
@@ -156,6 +173,9 @@ Exemple : `GET /api/listings?title=appartement&amenity=wifi&sort=rating&page=1&l
 
 // POST /api/listings/{id}/reviews et PUT /api/reviews/{id}
 { "rating": 4, "comment": "Logement très propre." }
+
+// POST /api/listings/{id}/bookings (90 nuits maximum)
+{ "arrivalDate": "2027-07-10", "departureDate": "2027-07-14", "guests": 2 }
 ```
 
 ## Modèle de données
@@ -196,7 +216,7 @@ Le fichier contient **un logement par ligne** au format JSON (voir [`data/listin
 ## Tests et qualité du code
 
 ```bash
-php bin/phpunit                      # 64 tests fonctionnels (HTTP) et d'intégration, base SQLite de test recréée à chaque test
+php bin/phpunit                      # 79 tests fonctionnels (HTTP) et d'intégration, base SQLite de test recréée à chaque test
 vendor/bin/php-cs-fixer fix          # normes de code Symfony (@Symfony)
 php bin/console lint:container       # vérifie la configuration des services
 ```
@@ -206,17 +226,17 @@ php bin/console lint:container       # vérifie la configuration des services
 ```
 src/
 ├── Command/         Commande console app:import-listings
-├── Controller/      Contrôleurs fins : une ressource par contrôleur (Listing, Review, User, Amenity, Health)
+├── Controller/      Contrôleurs fins : une ressource par contrôleur (Listing, Booking, Review, User, Amenity, Health)
 ├── DataFixtures/    Données de test (Faker)
 ├── Doctrine/        Middleware activant les clés étrangères de SQLite
 ├── Entity/          Entités Doctrine (+ Trait/TimestampableTrait)
 ├── Enum/            BookingStatus
 ├── EventListener/   Ajoute ttl et user à la réponse du login
-├── Model/           DTO des requêtes (ListingInput, ListingSearch, ReviewInput, PaginationDTO…) et Paginator
+├── Model/           DTO des requêtes (ListingInput, ListingSearch, BookingInput, ReviewInput, PaginationDTO…) et Paginator
 ├── Repository/      Requêtes Doctrine (recherche, fils, statistiques d'avis)
-├── Security/Voter/  Droits : ListingVoter (hôte, droit de noter), ReviewVoter (auteur)
+├── Security/Voter/  Droits : ListingVoter (hôte, noter, réserver), ReviewVoter (auteur), BookingVoter (voyageur / hôte)
 ├── Serializer/      ListingNormalizer : ajoute averageRating, reviewCount et myRating
-└── Service/         Logique métier : ListingManager, ReviewManager, FollowManager, ListingImporter
+└── Service/         Logique métier : ListingManager, ReviewManager, BookingManager, FollowManager, ListingImporter
 tests/               Tests PHPUnit (Controller, Entity, Command)
 api.http             Toutes les routes, prêtes à être exécutées
 data/                Fichier d'exemple pour l'import

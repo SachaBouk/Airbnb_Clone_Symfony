@@ -7,6 +7,9 @@ use App\Enum\BookingStatus;
 use App\Repository\BookingRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Context;
+use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
@@ -16,38 +19,48 @@ class Booking
 {
     use TimestampableTrait;
 
+    #[Groups(['booking:read'])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
+    #[Groups(['booking:read'])]
+    #[Context([DateTimeNormalizer::FORMAT_KEY => 'Y-m-d'])]
     #[ORM\Column(type: Types::DATE_IMMUTABLE)]
     #[Assert\NotNull]
     private ?\DateTimeImmutable $arrivalDate = null;
 
+    #[Groups(['booking:read'])]
+    #[Context([DateTimeNormalizer::FORMAT_KEY => 'Y-m-d'])]
     #[ORM\Column(type: Types::DATE_IMMUTABLE)]
     #[Assert\NotNull]
     #[Assert\GreaterThan(propertyPath: 'arrivalDate', message: 'La date de départ doit être après la date d\'arrivée.')]
     private ?\DateTimeImmutable $departureDate = null;
 
+    #[Groups(['booking:read'])]
     #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\Positive]
     private ?int $guests = null;
 
+    #[Groups(['booking:read'])]
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     #[Assert\NotBlank]
     #[Assert\PositiveOrZero]
     private ?string $totalPrice = null;
 
+    #[Groups(['booking:read'])]
     #[ORM\Column(enumType: BookingStatus::class)]
     private BookingStatus $status = BookingStatus::Pending;
 
+    #[Groups(['booking:read'])]
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull]
     private ?User $traveler = null;
 
+    #[Groups(['booking:read'])]
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull]
@@ -69,6 +82,19 @@ class Booking
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    /**
+     * Number of nights between arrival and departure (0 while the dates are not both set).
+     */
+    #[Groups(['booking:read'])]
+    public function getNights(): int
+    {
+        if (null === $this->arrivalDate || null === $this->departureDate) {
+            return 0;
+        }
+
+        return max(0, (int) $this->arrivalDate->diff($this->departureDate)->days);
     }
 
     public function getArrivalDate(): ?\DateTimeImmutable

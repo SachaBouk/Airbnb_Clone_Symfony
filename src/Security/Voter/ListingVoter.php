@@ -12,7 +12,9 @@ use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 /**
  * Decides what a user may do with a listing:
  * - EDIT / DELETE: only its host;
- * - REVIEW: only a traveler (not the host) who has finished a confirmed stay there.
+ * - REVIEW: only a traveler (not the host) who has finished a confirmed stay there;
+ * - BOOK: any logged-in user except its host;
+ * - VIEW_BOOKINGS: only its host.
  *
  * @extends Voter<string, Listing>
  */
@@ -21,6 +23,10 @@ final class ListingVoter extends Voter
     public const EDIT = 'LISTING_EDIT';
     public const DELETE = 'LISTING_DELETE';
     public const REVIEW = 'LISTING_REVIEW';
+    public const BOOK = 'LISTING_BOOK';
+    public const VIEW_BOOKINGS = 'LISTING_VIEW_BOOKINGS';
+
+    private const ATTRIBUTES = [self::EDIT, self::DELETE, self::REVIEW, self::BOOK, self::VIEW_BOOKINGS];
 
     public function __construct(
         private readonly BookingRepository $bookingRepository,
@@ -29,7 +35,7 @@ final class ListingVoter extends Voter
 
     protected function supports(string $attribute, mixed $subject): bool
     {
-        return \in_array($attribute, [self::EDIT, self::DELETE, self::REVIEW], true) && $subject instanceof Listing;
+        return \in_array($attribute, self::ATTRIBUTES, true) && $subject instanceof Listing;
     }
 
     protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?Vote $vote = null): bool
@@ -45,8 +51,18 @@ final class ListingVoter extends Voter
             return $this->canReview($subject, $user, $isHost, $vote);
         }
 
+        if (self::BOOK === $attribute) {
+            if ($isHost) {
+                $vote?->addReason('Un hôte ne peut pas réserver son propre logement.');
+            }
+
+            return !$isHost;
+        }
+
         if (!$isHost) {
-            $vote?->addReason('Seul l\'hôte du logement peut le modifier ou le supprimer.');
+            $vote?->addReason(self::VIEW_BOOKINGS === $attribute
+                ? 'Seul l\'hôte du logement peut voir ses réservations.'
+                : 'Seul l\'hôte du logement peut le modifier ou le supprimer.');
         }
 
         return $isHost;

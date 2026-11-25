@@ -307,6 +307,119 @@ Authorization: Bearer {{loginTraveler.response.body.$.token}}
 
 
 ###############################################################################
+# RÉSERVATIONS
+# Exécuter "listings", "loginHost" et "loginTraveler" avant, puis dans l'ordre.
+# Les dates sont calculées (dans 300 jours) pour être toujours dans le futur et libres.
+# Cycle de vie : pending → confirmed (par l'hôte) ; annulable avant l'arrivée.
+###############################################################################
+
+### Le voyageur réserve 3 nuits dans le premier logement → 201 (prix calculé par le serveur)
+# @name myBooking
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/bookings
+Content-Type: {{json}}
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+{
+    "arrivalDate": "{{$datetime "YYYY-MM-DD" 300 d}}",
+    "departureDate": "{{$datetime "YYYY-MM-DD" 303 d}}",
+    "guests": 1
+}
+
+### Mes voyages (réservations du voyageur connecté, paginé)
+GET {{baseUrl}}/api/bookings?page=1&limit=10
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+### Détail d'une réservation (voyageur ou hôte)
+GET {{baseUrl}}/api/bookings/{{myBooking.response.body.$.id}}
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+### Réservations du logement, vues par son hôte
+GET {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/bookings
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+### Erreur 403 : le voyageur essaie de confirmer sa propre réservation
+POST {{baseUrl}}/api/bookings/{{myBooking.response.body.$.id}}/confirm
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+### L'hôte confirme la réservation → status "confirmed"
+POST {{baseUrl}}/api/bookings/{{myBooking.response.body.$.id}}/confirm
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+### Erreur 409 : confirmer une réservation déjà confirmée
+POST {{baseUrl}}/api/bookings/{{myBooking.response.body.$.id}}/confirm
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+### Erreur 409 : réserver des dates déjà prises
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/bookings
+Content-Type: {{json}}
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+{
+    "arrivalDate": "{{$datetime "YYYY-MM-DD" 300 d}}",
+    "departureDate": "{{$datetime "YYYY-MM-DD" 303 d}}",
+    "guests": 1
+}
+
+### Erreur 403 : l'hôte réserve son propre logement
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/bookings
+Content-Type: {{json}}
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+{
+    "arrivalDate": "{{$datetime "YYYY-MM-DD" 300 d}}",
+    "departureDate": "{{$datetime "YYYY-MM-DD" 303 d}}",
+    "guests": 1
+}
+
+### Erreur 403 : le voyageur consulte les réservations d'un logement qui n'est pas le sien
+GET {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/bookings
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+### Erreur 422 : dates dans le passé / départ avant l'arrivée, trop de voyageurs
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/bookings
+Content-Type: {{json}}
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+{
+    "arrivalDate": "2020-01-10",
+    "departureDate": "2020-01-05",
+    "guests": 0
+}
+
+### Erreur 401 : réserver sans être connecté
+POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/bookings
+Content-Type: {{json}}
+Accept: {{json}}
+
+{
+    "arrivalDate": "{{$datetime "YYYY-MM-DD" 300 d}}",
+    "departureDate": "{{$datetime "YYYY-MM-DD" 303 d}}",
+    "guests": 1
+}
+
+### Le voyageur annule sa réservation → status "cancelled" (les dates redeviennent libres)
+POST {{baseUrl}}/api/bookings/{{myBooking.response.body.$.id}}/cancel
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+### Erreur 409 : annuler une réservation déjà annulée
+POST {{baseUrl}}/api/bookings/{{myBooking.response.body.$.id}}/cancel
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+
+###############################################################################
 # LISTING — création, modification, suppression (connecté)
 # Exécuter "amenities", "listings" et "loginHost" avant, puis dans l'ordre.
 ###############################################################################

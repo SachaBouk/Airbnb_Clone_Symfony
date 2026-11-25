@@ -18,13 +18,13 @@ class Listing
 {
     use TimestampableTrait;
 
-    #[Groups(['listing:list', 'listing:read', 'review:feed'])]
+    #[Groups(['listing:list', 'listing:read', 'review:feed', 'booking:read'])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[Groups(['listing:list', 'listing:read', 'review:feed'])]
+    #[Groups(['listing:list', 'listing:read', 'review:feed', 'booking:read'])]
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
     #[Assert\Length(max: 255)]
@@ -41,13 +41,13 @@ class Listing
     #[Assert\Positive]
     private ?string $priceByNight = null;
 
-    #[Groups(['listing:list', 'listing:read'])]
+    #[Groups(['listing:list', 'listing:read', 'booking:read'])]
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
     #[Assert\Length(max: 255)]
     private ?string $city = null;
 
-    #[Groups(['listing:list', 'listing:read'])]
+    #[Groups(['listing:list', 'listing:read', 'booking:read'])]
     #[ORM\Column(length: 100)]
     #[Assert\NotBlank]
     #[Assert\Length(max: 100)]
