@@ -2,12 +2,12 @@
 
 namespace App\Service;
 
-use App\Dto\ListingInput;
+use App\Model\ListingInput;
 use App\Entity\Listing;
+use App\Entity\User;
 use App\Repository\AmenityRepository;
 use App\Repository\BookingRepository;
 use App\Repository\ReviewRepository;
-use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -22,16 +22,15 @@ final readonly class ListingManager
 {
     public function __construct(
         private EntityManagerInterface $em,
-        private UserRepository $userRepository,
         private AmenityRepository $amenityRepository,
         private BookingRepository $bookingRepository,
         private ReviewRepository $reviewRepository,
     ) {
     }
 
-    public function create(ListingInput $input): Listing
+    public function create(ListingInput $input, User $host): Listing
     {
-        $listing = new Listing();
+        $listing = (new Listing())->setHost($host);
         $this->apply($listing, $input);
 
         $this->em->persist($listing);
@@ -65,16 +64,13 @@ final readonly class ListingManager
     }
 
     /**
-     * @throws UnprocessableEntityHttpException when hostId or an amenityId matches nothing
+     * The host is never taken from the input: it is set once, at creation, from the logged-in user.
+     *
+     * @throws UnprocessableEntityHttpException when an amenityId matches nothing
      */
     private function apply(Listing $listing, ListingInput $input): void
     {
         $violations = new ConstraintViolationList();
-
-        $host = $this->userRepository->find($input->hostId);
-        if (null === $host) {
-            $violations->add($this->violation($input, 'hostId', 'Aucun utilisateur avec l\'id {{ value }}.', $input->hostId));
-        }
 
         $amenities = [] === $input->amenityIds ? [] : $this->amenityRepository->findBy(['id' => $input->amenityIds]);
         $foundIds = array_map(static fn ($amenity) => $amenity->getId(), $amenities);
@@ -94,7 +90,6 @@ final readonly class ListingManager
             ->setCity($input->city)
             ->setCountry($input->country)
             ->setMaxGuests($input->maxGuests)
-            ->setHost($host)
             ->replaceAmenities($amenities);
     }
 

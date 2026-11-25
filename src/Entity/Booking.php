@@ -31,9 +31,7 @@ class Booking
     #[Assert\Positive]
     private ?int $guests = null;
 
-    /**
-     * Doctrine maps DECIMAL to a PHP string to avoid float rounding errors.
-     */
+    
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     #[Assert\NotBlank]
     #[Assert\PositiveOrZero]

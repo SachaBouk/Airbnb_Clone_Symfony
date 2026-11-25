@@ -1,17 +1,18 @@
 <?php
 
-namespace App\Dto;
+namespace App\Model;
 
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
+
 /**
- * Query string filters of GET /api/listings.
+ * Query string of GET /api/listings: filters + page/limit (inherited from PaginationDTO).
  */
-final readonly class ListingSearch
+final readonly class ListingSearch extends PaginationDTO
 {
     public function __construct(
-        /** Partial, case-insensitive match on the title. */
+
         #[Assert\Length(max: 255)]
         public ?string $title = null,
 
@@ -27,21 +28,18 @@ final readonly class ListingSearch
         #[Assert\Positive]
         public ?float $maxPrice = null,
 
-        /** Amenity slug, e.g. "wifi". */
+        
         #[Assert\Length(max: 100)]
         public ?string $amenity = null,
 
-        /** With availableTo: only listings with no pending or confirmed booking overlapping these dates. */
         public ?\DateTimeImmutable $availableFrom = null,
 
         public ?\DateTimeImmutable $availableTo = null,
 
-        #[Assert\Positive]
-        public int $page = 1,
-
-        #[Assert\Range(min: 1, max: 50)]
-        public int $limit = 20,
+        int $page = 1,
+        int $limit = 20,
     ) {
+        parent::__construct($page, $limit);
     }
 
     #[Assert\Callback]

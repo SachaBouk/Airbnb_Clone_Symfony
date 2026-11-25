@@ -7,6 +7,12 @@
 # Les ids changent à chaque rechargement des fixtures (SQLite ne réutilise pas
 # les anciens ids) : ils sont donc lus dans les réponses précédentes via
 # "# @name". Exécuter "amenities" et "listings" avant les requêtes qui en dépendent.
+#
+# Lecture (GET) : publique. Création / modification / suppression : il faut un
+# token JWT (exécuter "loginHost" avant), et seul l'hôte peut modifier ou
+# supprimer son logement. Comptes des fixtures (mot de passe "password") :
+#   host@example.com      → hôte du premier logement de la liste
+#   traveler@example.com  → n'est l'hôte d'aucun logement
 ###############################################################################
 
 @baseUrl = http://127.0.0.1:8000
@@ -87,15 +93,106 @@ Accept: {{json}}
 
 
 ###############################################################################
-# LISTING — création, modification, suppression
-# Exécuter "amenities" et "listings" avant, puis ces requêtes dans l'ordre.
+# AUTHENTIFICATION (JWT)
 ###############################################################################
 
-### Créer un logement → 201 + en-tête Location
+### Connexion de l'hôte → renvoie un token JWT
+# @name loginHost
+POST {{baseUrl}}/api/login_check
+Content-Type: {{json}}
+
+{
+    "email": "host@example.com",
+    "password": "password"
+}
+
+### Connexion d'un voyageur (pas hôte du premier logement) → sert à tester le 403
+# @name loginTraveler
+POST {{baseUrl}}/api/login_check
+Content-Type: {{json}}
+
+{
+    "email": "traveler@example.com",
+    "password": "password"
+}
+
+### Test get user : l'utilisateur connecté (exécuter "loginHost" avant)
+GET {{baseUrl}}/api/user
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+### Erreur 401 : get user sans token
+GET {{baseUrl}}/api/user
+Accept: {{json}}
+
+### Erreur 401 : mauvais mot de passe
+POST {{baseUrl}}/api/login_check
+Content-Type: {{json}}
+
+{
+    "email": "host@example.com",
+    "password": "mauvais"
+}
+
+
+###############################################################################
+# FOLLOWERS (ManyToMany User <-> User)
+# Exécuter "listings", "loginHost" et "loginTraveler" avant.
+# L'hôte suivi est l'hôte du premier logement (host@example.com).
+###############################################################################
+
+### Le voyageur suit l'hôte → 204 (le refaire ne change rien)
+POST {{baseUrl}}/api/users/{{listings.response.body.$.items[0].host.id}}/follow
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+### Followers de l'hôte (paginé : total, lastPage, items)
+GET {{baseUrl}}/api/users/{{listings.response.body.$.items[0].host.id}}/followers?page=1&limit=10
+Accept: {{json}}
+
+### Profil du voyageur connecté (fournit son id pour la requête suivante)
+# @name meTraveler
+GET {{baseUrl}}/api/user
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+### Utilisateurs suivis par le voyageur
+GET {{baseUrl}}/api/users/{{meTraveler.response.body.$.id}}/following
+Accept: {{json}}
+
+### Le voyageur ne suit plus l'hôte → 204
+DELETE {{baseUrl}}/api/users/{{listings.response.body.$.items[0].host.id}}/follow
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+### Erreur 422 : l'hôte essaie de se suivre lui-même
+POST {{baseUrl}}/api/users/{{listings.response.body.$.items[0].host.id}}/follow
+Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
+
+### Erreur 401 : suivre sans être connecté
+POST {{baseUrl}}/api/users/{{listings.response.body.$.items[0].host.id}}/follow
+Accept: {{json}}
+
+### Erreur 404 : suivre un utilisateur inexistant
+POST {{baseUrl}}/api/users/999999/follow
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+### Erreur 422 : pagination invalide (limit entre 1 et 50)
+GET {{baseUrl}}/api/users/{{listings.response.body.$.items[0].host.id}}/followers?limit=0
+Accept: {{json}}
+
+
+###############################################################################
+# LISTING — création, modification, suppression (connecté)
+# Exécuter "amenities", "listings" et "loginHost" avant, puis dans l'ordre.
+###############################################################################
+
+### Créer un logement → 201 + en-tête Location (l'hôte = l'utilisateur connecté)
 # @name created
 POST {{baseUrl}}/api/listings
 Content-Type: {{json}}
 Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
 
 {
     "title": "Cabane au bord du lac",
@@ -104,14 +201,13 @@ Accept: {{json}}
     "city": "Annecy",
     "country": "France",
     "maxGuests": 3,
-    "hostId": {{listings.response.body.$.items[0].host.id}},
     "amenityIds": [
         {{amenities.response.body.$[0].id}},
         {{amenities.response.body.$[1].id}}
     ]
 }
 
-### Lire le logement créé
+### Lire le logement créé (public)
 GET {{baseUrl}}/api/listings/{{created.response.body.$.id}}
 Accept: {{json}}
 
@@ -119,6 +215,7 @@ Accept: {{json}}
 PUT {{baseUrl}}/api/listings/{{created.response.body.$.id}}
 Content-Type: {{json}}
 Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
 
 {
     "title": "Cabane rénovée au bord du lac",
@@ -127,42 +224,82 @@ Accept: {{json}}
     "city": "Annecy",
     "country": "France",
     "maxGuests": 4,
-    "hostId": {{listings.response.body.$.items[0].host.id}},
     "amenityIds": [
         {{amenities.response.body.$[2].id}}
     ]
 }
 
-### Supprimer le logement créé → 204
+### Erreur 403 : un autre utilisateur tente de modifier le logement (exécuter "loginTraveler" avant)
+PUT {{baseUrl}}/api/listings/{{created.response.body.$.id}}
+Content-Type: {{json}}
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+{
+    "title": "Piraté",
+    "description": "x",
+    "priceByNight": 1,
+    "city": "Annecy",
+    "country": "France",
+    "maxGuests": 1
+}
+
+### Erreur 403 : un autre utilisateur tente de supprimer le logement
 DELETE {{baseUrl}}/api/listings/{{created.response.body.$.id}}
+Accept: {{json}}
+Authorization: Bearer {{loginTraveler.response.body.$.token}}
+
+### Supprimer le logement créé (par son hôte) → 204
+DELETE {{baseUrl}}/api/listings/{{created.response.body.$.id}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
 
 ### Vérifier la suppression → 404
 GET {{baseUrl}}/api/listings/{{created.response.body.$.id}}
 Accept: {{json}}
 
+### Erreur 401 : créer sans token
+POST {{baseUrl}}/api/listings
+Content-Type: {{json}}
+Accept: {{json}}
+
+{
+    "title": "Sans token",
+    "description": "x",
+    "priceByNight": 50,
+    "city": "Lyon",
+    "country": "France",
+    "maxGuests": 2
+}
+
+### Erreur 401 : token invalide
+DELETE {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}
+Accept: {{json}}
+Authorization: Bearer token-bidon
+
 ### Erreur 422 : champs manquants ou invalides
 POST {{baseUrl}}/api/listings
 Content-Type: {{json}}
 Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
 
 {
     "title": "",
     "priceByNight": -10
 }
 
-### Erreur 422 : hôte et équipement inexistants
+### Erreur 422 : équipement inexistant
 POST {{baseUrl}}/api/listings
 Content-Type: {{json}}
 Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
 
 {
     "title": "Logement fantôme",
-    "description": "Hôte inconnu.",
+    "description": "Équipement inconnu.",
     "priceByNight": 50,
     "city": "Lyon",
     "country": "France",
     "maxGuests": 2,
-    "hostId": 999999,
     "amenityIds": [999999]
 }
 
@@ -170,6 +307,7 @@ Accept: {{json}}
 POST {{baseUrl}}/api/listings
 Content-Type: {{json}}
 Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
 
 { "title": "oubli de l'accolade"
 
@@ -177,6 +315,7 @@ Accept: {{json}}
 PUT {{baseUrl}}/api/listings/999999
 Content-Type: {{json}}
 Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}
 
 {
     "title": "Inexistant",
@@ -184,11 +323,11 @@ Accept: {{json}}
     "priceByNight": 50,
     "city": "Lyon",
     "country": "France",
-    "maxGuests": 2,
-    "hostId": {{listings.response.body.$.items[0].host.id}}
+    "maxGuests": 2
 }
 
-### Erreur 409 : supprimer un logement qui a des réservations
-# (le premier logement des fixtures en a toujours)
+### Erreur 409 : l'hôte supprime son logement qui a des réservations
+# (le premier logement des fixtures appartient à host@example.com et a des réservations)
 DELETE {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}
 Accept: {{json}}
+Authorization: Bearer {{loginHost.response.body.$.token}}

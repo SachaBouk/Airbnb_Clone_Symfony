@@ -2,20 +2,16 @@
 
 namespace App\Repository;
 
-use App\Dto\ListingSearch;
+use App\Model\ListingSearch;
+use App\Model\Paginator;
 use App\Entity\Booking;
 use App\Entity\Listing;
 use App\Enum\BookingStatus;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\ORM\Tools\Pagination\OffsetPaginator;
-use Doctrine\ORM\Tools\Pagination\Window;
-use Doctrine\ORM\Tools\Pagination\WindowPage;
 use Doctrine\Persistence\ManagerRegistry;
 
-/**
- * @extends ServiceEntityRepository<Listing>
- */
+
 class ListingRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -24,9 +20,9 @@ class ListingRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return WindowPage<Listing>
+     * @return Paginator<Listing>
      */
-    public function search(ListingSearch $search): WindowPage
+    public function search(ListingSearch $search): Paginator
     {
         $qb = $this->createQueryBuilder('l')
             ->addSelect('h', 'a')
@@ -53,14 +49,14 @@ class ListingRepository extends ServiceEntityRepository
             $qb->andWhere('l.priceByNight <= :maxPrice')->setParameter('maxPrice', $search->maxPrice);
         }
         if (null !== $search->amenity) {
-            // Subquery rather than a join, so the listing's other amenities stay loadable.
+
             $qb->andWhere(\sprintf(
                 'EXISTS (SELECT 1 FROM %s fl JOIN fl.amenities fa WHERE fl = l AND fa.slug = :amenity)',
                 Listing::class,
             ))->setParameter('amenity', $search->amenity);
         }
         if ($search->hasAvailabilityFilter()) {
-            // Two stays overlap when each one starts before the other ends.
+
             $qb->andWhere(\sprintf(
                 'NOT EXISTS (SELECT 1 FROM %s b WHERE b.listing = l AND b.status IN (:blockingStatuses)
                     AND b.arrivalDate < :availableTo AND b.departureDate > :availableFrom)',
@@ -71,8 +67,6 @@ class ListingRepository extends ServiceEntityRepository
                 ->setParameter('availableTo', $search->availableTo, Types::DATE_IMMUTABLE);
         }
 
-        // Amenities are a fetch-joined collection: the paginator must count listings, not joined rows.
-        return (new OffsetPaginator(fetchJoinCollection: true))
-            ->paginate($qb, Window::fromPageNumberAndSize($search->page, $search->limit));
+        return (new Paginator())->paginate($qb, $search);
     }
 }

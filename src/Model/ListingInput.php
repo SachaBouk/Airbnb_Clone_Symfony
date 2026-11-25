@@ -1,15 +1,9 @@
 <?php
 
-namespace App\Dto;
+namespace App\Model;
 
 use Symfony\Component\Validator\Constraints as Assert;
 
-/**
- * JSON body of POST /api/listings and PUT /api/listings/{id}.
- *
- * Fields are nullable so that a missing field is reported by the validator
- * ("should not be blank") instead of failing deserialization.
- */
 final readonly class ListingInput
 {
     /**
@@ -40,11 +34,6 @@ final readonly class ListingInput
         #[Assert\NotNull]
         #[Assert\Range(min: 1, max: 50)]
         public ?int $maxGuests = null,
-
-        /** Temporary until authentication exists: the host will then be the logged-in user. */
-        #[Assert\NotNull]
-        #[Assert\Positive]
-        public ?int $hostId = null,
 
         #[Assert\Unique]
         #[Assert\All([new Assert\Positive()])]

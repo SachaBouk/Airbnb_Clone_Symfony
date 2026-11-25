@@ -9,12 +9,15 @@ use App\Entity\Review;
 use App\Entity\User;
 use App\Enum\BookingStatus;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Tools\SchemaTool;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use App\Tests\ResetDatabaseTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class ListingControllerTest extends WebTestCase
 {
+    use ResetDatabaseTrait;
+
     private KernelBrowser $client;
     private EntityManagerInterface $em;
 
@@ -23,15 +26,7 @@ final class ListingControllerTest extends WebTestCase
         $this->client = self::createClient();
         $this->em = self::getContainer()->get(EntityManagerInterface::class);
 
-        // Fresh, empty test database for every test. Foreign keys are paused while
-        // dropping, otherwise SQLite refuses to drop tables that still have linked rows.
-        $connection = $this->em->getConnection();
-        $schemaTool = new SchemaTool($this->em);
-        $metadata = $this->em->getMetadataFactory()->getAllMetadata();
-        $connection->executeStatement('PRAGMA foreign_keys = OFF');
-        $schemaTool->dropSchema($metadata);
-        $connection->executeStatement('PRAGMA foreign_keys = ON');
-        $schemaTool->createSchema($metadata);
+        $this->resetDatabase($this->em);
     }
 
     public function testListReturnsPaginatedListingsWithoutPrivateHostData(): void
@@ -48,7 +43,7 @@ final class ListingControllerTest extends WebTestCase
         self::assertResponseHeaderSame('Content-Type', 'application/json');
         $data = $this->json();
         self::assertSame(3, $data['total']);
-        self::assertSame(2, $data['pages']);
+        self::assertSame(2, $data['lastPage']);
         self::assertCount(2, $data['items']);
         self::assertSame(['id', 'firstName'], array_keys($data['items'][0]['host']));
         self::assertArrayNotHasKey('description', $data['items'][0]);
@@ -145,7 +140,6 @@ final class ListingControllerTest extends WebTestCase
         $withPool = $this->createListing($host, 'Nice', 4, '150.00')->addAmenity($wifi)->addAmenity($pool);
         $this->createListing($host, 'Lyon', 4, '90.00')->addAmenity($wifi);
         $this->em->flush();
-        // Like a real request: start from an empty identity map, so amenities are loaded (and sorted) from the DB.
         $this->em->clear();
 
         $this->client->request('GET', '/api/listings?amenity=pool');
@@ -169,7 +163,7 @@ final class ListingControllerTest extends WebTestCase
 
         $data = $this->json();
         self::assertSame(5, $data['total']);
-        self::assertSame(3, $data['pages']);
+        self::assertSame(3, $data['lastPage']);
         self::assertCount(1, $data['items']);
         self::assertCount(3, $data['items'][0]['amenities']);
     }
@@ -205,13 +199,13 @@ final class ListingControllerTest extends WebTestCase
         self::assertSame('availableTo', $this->json()['violations'][0]['propertyPath']);
     }
 
-    public function testCreateListing(): void
+    public function testCreateListingUsesTheLoggedInUserAsHost(): void
     {
         $host = $this->createUser('host@example.com', 'Hélène');
         $wifi = $this->createAmenity('wifi', 'Wi-Fi');
         $this->em->flush();
 
-        $this->postJson('POST', '/api/listings', $this->validPayload($host, [$wifi->getId()]));
+        $this->sendJson('POST', '/api/listings', $this->validPayload([$wifi->getId()]), as: $host);
 
         self::assertResponseStatusCodeSame(201);
         $data = $this->json();
@@ -225,51 +219,106 @@ final class ListingControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
     }
 
+    public function testCreateIgnoresAHostIdSentInTheBody(): void
+    {
+        $host = $this->createUser('host@example.com', 'Hélène');
+        $victim = $this->createUser('victim@example.com', 'Vera');
+        $this->em->flush();
+
+        $this->sendJson('POST', '/api/listings', ['hostId' => $victim->getId()] + $this->validPayload(), as: $host);
+
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame($host->getId(), $this->json()['host']['id']);
+    }
+
+    public function testCreateWithoutTokenReturns401(): void
+    {
+        $this->sendJson('POST', '/api/listings', $this->validPayload());
+
+        self::assertResponseStatusCodeSame(401);
+        self::assertSame(0, $this->em->getRepository(Listing::class)->count([]));
+    }
+
+    public function testCreateWithInvalidTokenReturns401(): void
+    {
+        $this->client->request('POST', '/api/listings', server: [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_AUTHORIZATION' => 'Bearer not-a-jwt',
+        ], content: json_encode($this->validPayload()));
+
+        self::assertResponseStatusCodeSame(401);
+    }
+
     public function testCreateRejectsInvalidPayload(): void
     {
-        $this->postJson('POST', '/api/listings', ['title' => '', 'priceByNight' => -5]);
+        $host = $this->createUser('host@example.com', 'Hélène');
+        $this->em->flush();
+
+        $this->sendJson('POST', '/api/listings', ['title' => '', 'priceByNight' => -5], as: $host);
 
         self::assertResponseStatusCodeSame(422);
         $paths = array_column($this->json()['violations'], 'propertyPath');
-        foreach (['title', 'description', 'priceByNight', 'city', 'country', 'maxGuests', 'hostId'] as $field) {
+        foreach (['title', 'description', 'priceByNight', 'city', 'country', 'maxGuests'] as $field) {
             self::assertContains($field, $paths);
         }
     }
 
-    public function testCreateRejectsUnknownHostAndAmenity(): void
+    public function testCreateRejectsUnknownAmenity(): void
     {
         $host = $this->createUser('host@example.com', 'Hélène');
         $this->em->flush();
-        $payload = ['hostId' => 9999, 'amenityIds' => [9999]] + $this->validPayload($host);
 
-        $this->postJson('POST', '/api/listings', $payload);
+        $this->sendJson('POST', '/api/listings', $this->validPayload([9999]), as: $host);
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSame(['hostId', 'amenityIds'], array_column($this->json()['violations'], 'propertyPath'));
+        self::assertSame(['amenityIds'], array_column($this->json()['violations'], 'propertyPath'));
         self::assertSame(0, $this->em->getRepository(Listing::class)->count([]));
     }
 
-    public function testUpdateReplacesFieldsAndAmenities(): void
+    public function testHostCanUpdateFieldsAndAmenitiesButNotTheHost(): void
     {
         $host = $this->createUser('host@example.com', 'Hélène');
-        $newHost = $this->createUser('other@example.com', 'Omar');
         $wifi = $this->createAmenity('wifi', 'Wi-Fi');
         $pool = $this->createAmenity('pool', 'Piscine');
         $tv = $this->createAmenity('tv', 'TV');
         $listing = $this->createListing($host, 'Paris', 2, '80.00')->replaceAmenities([$wifi, $pool]);
         $this->em->flush();
 
-        $payload = ['title' => 'Nouveau titre', 'priceByNight' => 110.5] + $this->validPayload($newHost, [$pool->getId(), $tv->getId()]);
-        $this->postJson('PUT', '/api/listings/'.$listing->getId(), $payload);
+        $payload = ['title' => 'Nouveau titre', 'priceByNight' => 110.5] + $this->validPayload([$pool->getId(), $tv->getId()]);
+        $this->sendJson('PUT', '/api/listings/'.$listing->getId(), $payload, as: $host);
 
         self::assertResponseIsSuccessful();
         $data = $this->json();
         self::assertSame('Nouveau titre', $data['title']);
         self::assertSame('110.50', $data['priceByNight']);
-        self::assertSame($newHost->getId(), $data['host']['id']);
+        self::assertSame($host->getId(), $data['host']['id']);
         // A JSON list, not an object, even though "wifi" was removed from the collection.
         self::assertSame(['pool', 'tv'], array_column($data['amenities'], 'slug'));
         self::assertTrue(array_is_list($data['amenities']));
+    }
+
+    public function testAnotherUserCannotUpdateTheListing(): void
+    {
+        $host = $this->createUser('host@example.com', 'Hélène');
+        $intruder = $this->createUser('intruder@example.com', 'Igor');
+        $listing = $this->createListing($host, 'Paris', 2, '80.00');
+        $this->em->flush();
+
+        $this->sendJson('PUT', '/api/listings/'.$listing->getId(), ['title' => 'Piraté'] + $this->validPayload(), as: $intruder);
+
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/api/listings/'.$listing->getId());
+        self::assertSame('Logement à Paris', $this->json()['listing']['title']);
+    }
+
+    public function testUpdateWithoutTokenReturns401(): void
+    {
+        $listing = $this->createListing($this->createUser('host@example.com', 'Hélène'), 'Paris', 2, '80.00');
+        $this->em->flush();
+
+        $this->sendJson('PUT', '/api/listings/'.$listing->getId(), $this->validPayload());
+
+        self::assertResponseStatusCodeSame(401);
     }
 
     public function testUpdateUnknownListingReturns404(): void
@@ -277,19 +326,19 @@ final class ListingControllerTest extends WebTestCase
         $host = $this->createUser('host@example.com', 'Hélène');
         $this->em->flush();
 
-        $this->postJson('PUT', '/api/listings/9999', $this->validPayload($host));
+        $this->sendJson('PUT', '/api/listings/9999', $this->validPayload(), as: $host);
 
         self::assertResponseStatusCodeSame(404);
     }
 
-    public function testDeleteListingAlsoRemovesItsAmenityLinks(): void
+    public function testHostCanDeleteListingAndItsAmenityLinksAreRemoved(): void
     {
-        $listing = $this->createListing($this->createUser('host@example.com', 'Hélène'), 'Paris', 2, '80.00')
-            ->addAmenity($this->createAmenity('wifi', 'Wi-Fi'));
+        $host = $this->createUser('host@example.com', 'Hélène');
+        $listing = $this->createListing($host, 'Paris', 2, '80.00')->addAmenity($this->createAmenity('wifi', 'Wi-Fi'));
         $this->em->flush();
         $id = $listing->getId();
 
-        $this->client->request('DELETE', '/api/listings/'.$id);
+        $this->sendJson('DELETE', '/api/listings/'.$id, as: $host);
 
         self::assertResponseStatusCodeSame(204);
         $this->client->request('GET', '/api/listings/'.$id);
@@ -298,13 +347,37 @@ final class ListingControllerTest extends WebTestCase
         self::assertSame(0, (int) $links);
     }
 
-    public function testDeleteListingWithBookingsReturns409(): void
+    public function testAnotherUserCannotDeleteTheListing(): void
     {
         $listing = $this->createListing($this->createUser('host@example.com', 'Hélène'), 'Paris', 2, '80.00');
+        $intruder = $this->createUser('intruder@example.com', 'Igor');
+        $this->em->flush();
+
+        $this->sendJson('DELETE', '/api/listings/'.$listing->getId(), as: $intruder);
+
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/api/listings/'.$listing->getId());
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testDeleteWithoutTokenReturns401(): void
+    {
+        $listing = $this->createListing($this->createUser('host@example.com', 'Hélène'), 'Paris', 2, '80.00');
+        $this->em->flush();
+
+        $this->sendJson('DELETE', '/api/listings/'.$listing->getId());
+
+        self::assertResponseStatusCodeSame(401);
+    }
+
+    public function testDeleteListingWithBookingsReturns409(): void
+    {
+        $host = $this->createUser('host@example.com', 'Hélène');
+        $listing = $this->createListing($host, 'Paris', 2, '80.00');
         $this->createBooking($listing, $this->createUser('traveler@example.com', 'Victor'), '2027-07-10', '2027-07-15', BookingStatus::Confirmed);
         $this->em->flush();
 
-        $this->client->request('DELETE', '/api/listings/'.$listing->getId());
+        $this->sendJson('DELETE', '/api/listings/'.$listing->getId(), as: $host);
 
         self::assertResponseStatusCodeSame(409);
         $this->client->request('GET', '/api/listings/'.$listing->getId());
@@ -327,7 +400,7 @@ final class ListingControllerTest extends WebTestCase
     /**
      * @param list<int> $amenityIds
      */
-    private function validPayload(User $host, array $amenityIds = []): array
+    private function validPayload(array $amenityIds = []): array
     {
         return [
             'title' => 'Cabane au bord du lac',
@@ -336,14 +409,23 @@ final class ListingControllerTest extends WebTestCase
             'city' => 'Annecy',
             'country' => 'France',
             'maxGuests' => 3,
-            'hostId' => $host->getId(),
             'amenityIds' => $amenityIds,
         ];
     }
 
-    private function postJson(string $method, string $uri, array $payload): void
+    /**
+     * Sends a JSON request, authenticated with a real JWT when $as is given.
+     */
+    private function sendJson(string $method, string $uri, ?array $payload = null, ?User $as = null): void
     {
-        $this->client->request($method, $uri, server: ['CONTENT_TYPE' => 'application/json'], content: json_encode($payload, \JSON_THROW_ON_ERROR));
+        $server = ['CONTENT_TYPE' => 'application/json'];
+        if (null !== $as) {
+            $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($as);
+            $server['HTTP_AUTHORIZATION'] = 'Bearer '.$token;
+        }
+
+        $content = null === $payload ? null : json_encode($payload, \JSON_THROW_ON_ERROR);
+        $this->client->request($method, $uri, server: $server, content: $content);
     }
 
     private function createAmenity(string $slug, string $name): Amenity

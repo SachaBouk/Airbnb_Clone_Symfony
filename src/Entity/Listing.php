@@ -31,9 +31,7 @@ class Listing
     #[Assert\NotBlank]
     private ?string $description = null;
 
-    /**
-     * Doctrine maps DECIMAL to a PHP string to avoid float rounding errors.
-     */
+   
     #[Groups(['listing:list', 'listing:read'])]
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     #[Assert\NotBlank]
@@ -59,13 +57,12 @@ class Listing
     private ?int $maxGuests = null;
 
     #[Groups(['listing:list', 'listing:read'])]
-    #[ORM\ManyToOne]
+    #[ORM\ManyToOne(inversedBy: 'listings')]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull]
     private ?User $host = null;
 
     /**
-     * Owning side of the ManyToMany: Doctrine fills the listing_amenity join table from here.
      *
      * @var Collection<int, Amenity>
      */
@@ -92,8 +89,6 @@ class Listing
     }
 
     /**
-     * Serialized as "amenities". array_values() guarantees a JSON array: after a removal the
-     * collection keys have gaps, and the serializer would otherwise output an object.
      *
      * @return list<Amenity>
      */

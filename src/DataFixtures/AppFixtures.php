@@ -52,7 +52,6 @@ class AppFixtures extends Fixture
         $faker = Factory::create('fr_FR');
         $faker->seed(2026);
 
-        // Hashing is slow on purpose: hash once and reuse it for every user.
         $hashedPassword = $this->passwordHasher->hashPassword(new User(), self::PASSWORD);
 
         $hosts = [$this->createUser($manager, $hashedPassword, 'host@example.com', 'Hélène', 'Hôte')];
@@ -74,6 +73,20 @@ class AppFixtures extends Fixture
         for ($i = 0; $i < self::LISTING_COUNT; ++$i) {
             $listing = $this->createListing($manager, $faker, $hosts[$i % \count($hosts)], $amenities);
             $this->createBookingsAndReviews($manager, $faker, $listing, $travelers);
+        }
+
+        // Self-referencing ManyToMany: travelers follow hosts, and hosts follow each other.
+        foreach ($travelers as $traveler) {
+            foreach ($faker->randomElements($hosts, $faker->numberBetween(0, 3)) as $host) {
+                $traveler->follow($host);
+            }
+        }
+        foreach ($hosts as $host) {
+            foreach ($faker->randomElements($hosts, $faker->numberBetween(0, 2)) as $otherHost) {
+                if ($otherHost !== $host) {
+                    $host->follow($otherHost);
+                }
+            }
         }
 
         $manager->flush();
@@ -115,7 +128,6 @@ class AppFixtures extends Fixture
     }
 
     /**
-     * Bookings of one listing follow each other in time, so they never overlap.
      *
      * @param list<User> $travelers
      */
@@ -148,7 +160,6 @@ class AppFixtures extends Fixture
 
             $manager->persist($booking);
 
-            // Only travelers who actually stayed can leave a review.
             if ($isPast && BookingStatus::Confirmed === $status && $faker->boolean(70)) {
                 $review = (new Review())
                     ->setRating($faker->biasedNumberBetween(1, 5, 'sqrt'))

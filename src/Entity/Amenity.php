@@ -9,9 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
-/**
- * An equipment a listing can offer (Wi-Fi, pool, parking...).
- */
+
 #[ORM\Entity(repositoryClass: AmenityRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_AMENITY_SLUG', fields: ['slug'])]
 class Amenity
@@ -28,9 +26,7 @@ class Amenity
     #[Assert\Length(max: 100)]
     private ?string $name = null;
 
-    /**
-     * URL-friendly identifier used by the ?amenity= filter, e.g. "wifi".
-     */
+    
     #[Groups(['amenity:read', 'listing:list', 'listing:read'])]
     #[ORM\Column(length: 100)]
     #[Assert\NotBlank]
@@ -85,9 +81,7 @@ class Amenity
         return $this->listings;
     }
 
-    /**
-     * Called by Listing::addAmenity(), which owns the relation.
-     */
+   
     public function addListing(Listing $listing): static
     {
         if (!$this->listings->contains($listing)) {

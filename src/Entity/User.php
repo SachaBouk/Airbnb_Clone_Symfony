@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -13,18 +15,20 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
-    #[Groups(['user:public'])]
+    #[Groups(['user:public', 'user:read'])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
+    #[Groups(['user:read'])]
     #[ORM\Column(length: 180)]
     private ?string $email = null;
 
     /**
      * @var list<string> The user roles
      */
+    #[Groups(['user:read'])]
     #[ORM\Column]
     private array $roles = [];
 
@@ -34,16 +38,62 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?string $password = null;
 
-    #[Groups(['user:public'])]
+    #[Groups(['user:public', 'user:read'])]
     #[ORM\Column(length: 100)]
     #[Assert\NotBlank]
     #[Assert\Length(max: 100)]
     private ?string $firstName = null;
 
+    #[Groups(['user:read'])]
     #[ORM\Column(length: 100)]
     #[Assert\NotBlank]
     #[Assert\Length(max: 100)]
     private ?string $lastName = null;
+
+    /**
+     * OneToMany: the listings this user hosts (inverse side of Listing::$host).
+     *
+     * @var Collection<int, Listing>
+     */
+    #[ORM\OneToMany(targetEntity: Listing::class, mappedBy: 'host')]
+    private Collection $listings;
+
+    /**
+     * OneToMany: the reviews this user wrote (inverse side of Review::$author).
+     *
+     * @var Collection<int, Review>
+     */
+    #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'author')]
+    #[ORM\OrderBy(['createdAt' => 'DESC'])]
+    private Collection $reviews;
+
+    /**
+     * Self-referencing ManyToMany (owning side): the users this user follows.
+     * Stored in the user_follow table: follower_id follows followed_id.
+     *
+     * @var Collection<int, User>
+     */
+    #[ORM\ManyToMany(targetEntity: self::class, inversedBy: 'followers')]
+    #[ORM\JoinTable(name: 'user_follow')]
+    #[ORM\JoinColumn(name: 'follower_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\InverseJoinColumn(name: 'followed_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    private Collection $following;
+
+    /**
+     * Inverse side of $following: the users who follow this user.
+     *
+     * @var Collection<int, User>
+     */
+    #[ORM\ManyToMany(targetEntity: self::class, mappedBy: 'following')]
+    private Collection $followers;
+
+    public function __construct()
+    {
+        $this->listings = new ArrayCollection();
+        $this->reviews = new ArrayCollection();
+        $this->following = new ArrayCollection();
+        $this->followers = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -87,7 +137,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * A visual identifier that represents this user.
      *
      * @see UserInterface
      */
@@ -133,9 +182,66 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    
     /**
-     * Ensure the session doesn't contain actual password hashes by CRC32C-hashing them, as supported since Symfony 7.3.
+     * @return Collection<int, Listing>
      */
+    public function getListings(): Collection
+    {
+        return $this->listings;
+    }
+
+    /**
+     * @return Collection<int, Review>
+     */
+    public function getReviews(): Collection
+    {
+        return $this->reviews;
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    public function getFollowing(): Collection
+    {
+        return $this->following;
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    public function getFollowers(): Collection
+    {
+        return $this->followers;
+    }
+
+    public function isFollowing(self $user): bool
+    {
+        return $this->following->contains($user);
+    }
+
+    /**
+     * Keeps both sides in sync. Following oneself is refused by FollowManager, not here.
+     */
+    public function follow(self $user): static
+    {
+        if (!$this->following->contains($user)) {
+            $this->following->add($user);
+            $user->followers->add($this);
+        }
+
+        return $this;
+    }
+
+    public function unfollow(self $user): static
+    {
+        if ($this->following->removeElement($user)) {
+            $user->followers->removeElement($this);
+        }
+
+        return $this;
+    }
+
     public function __serialize(): array
     {
         $data = (array) $this;

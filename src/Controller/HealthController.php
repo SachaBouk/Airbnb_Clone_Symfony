@@ -9,7 +9,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class HealthController extends AbstractController
 {
-    #[Route('/api/health', name: 'api_health', methods: ['GET'])]
+    #[Route('/api/health', name: 'app_health', methods: ['GET'])]
     public function __invoke(Connection $connection): JsonResponse
     {
         $connection->executeQuery('SELECT 1');

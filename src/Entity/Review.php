@@ -34,7 +34,7 @@ class Review
     private \DateTimeImmutable $createdAt;
 
     #[Groups(['review:read'])]
-    #[ORM\ManyToOne]
+    #[ORM\ManyToOne(inversedBy: 'reviews')]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull]
     private ?User $author = null;
