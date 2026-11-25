@@ -4,10 +4,6 @@ namespace App\Model;
 
 use Symfony\Component\Validator\Constraints as Assert;
 
-/**
- * ?page= and ?limit= of any paginated list. Use it directly with #[MapQueryString],
- * or extend it to add filters (see ListingSearch).
- */
 readonly class PaginationDTO
 {
     public function __construct(

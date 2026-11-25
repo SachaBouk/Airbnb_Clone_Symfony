@@ -9,11 +9,6 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
-/**
- * Unlike fixtures (dev only), this command can fill a production database.
- *
- * Usage: bin/console app:import-listings [file]   (default: data/listings.jsonl)
- */
 #[AsCommand(
     name: 'app:import-listings',
     description: 'Importe des logements depuis un fichier JSON Lines (un logement par ligne)',

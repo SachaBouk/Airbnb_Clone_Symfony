@@ -7,9 +7,6 @@ use App\Tests\ResetDatabaseTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-/**
- * createdAt / updatedAt are filled by TimestampableTrait's lifecycle callbacks.
- */
 final class TimestampableTest extends KernelTestCase
 {
     use ResetDatabaseTrait;

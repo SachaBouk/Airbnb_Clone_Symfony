@@ -29,16 +29,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 180)]
     private ?string $email = null;
 
-    /**
-     * @var list<string> The user roles
-     */
     #[Groups(['user:read'])]
     #[ORM\Column]
     private array $roles = [];
 
-    /**
-     * @var string The hashed password
-     */
     #[ORM\Column]
     private ?string $password = null;
 
@@ -54,40 +48,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\Length(max: 100)]
     private ?string $lastName = null;
 
-    /**
-     * OneToMany: the listings this user hosts (inverse side of Listing::$host).
-     *
-     * @var Collection<int, Listing>
-     */
     #[ORM\OneToMany(targetEntity: Listing::class, mappedBy: 'host')]
     private Collection $listings;
 
-    /**
-     * OneToMany: the reviews this user wrote (inverse side of Review::$author).
-     *
-     * @var Collection<int, Review>
-     */
     #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'author')]
     #[ORM\OrderBy(['createdAt' => 'DESC'])]
     private Collection $reviews;
 
-    /**
-     * Self-referencing ManyToMany (owning side): the users this user follows.
-     * Stored in the user_follow table: follower_id follows followed_id.
-     *
-     * @var Collection<int, User>
-     */
     #[ORM\ManyToMany(targetEntity: self::class, inversedBy: 'followers')]
     #[ORM\JoinTable(name: 'user_follow')]
     #[ORM\JoinColumn(name: 'follower_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
     #[ORM\InverseJoinColumn(name: 'followed_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
     private Collection $following;
 
-    /**
-     * Inverse side of $following: the users who follow this user.
-     *
-     * @var Collection<int, User>
-     */
     #[ORM\ManyToMany(targetEntity: self::class, mappedBy: 'following')]
     private Collection $followers;
 
@@ -140,29 +113,20 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @see UserInterface
-     */
     public function getUserIdentifier(): string
     {
         return (string) $this->email;
     }
 
-    /**
-     * @see UserInterface
-     */
     public function getRoles(): array
     {
         $roles = $this->roles;
-        // guarantee every user at least has ROLE_USER
+
         $roles[] = 'ROLE_USER';
 
         return array_unique($roles);
     }
 
-    /**
-     * @param list<string> $roles
-     */
     public function setRoles(array $roles): static
     {
         $this->roles = $roles;
@@ -170,9 +134,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @see PasswordAuthenticatedUserInterface
-     */
     public function getPassword(): ?string
     {
         return $this->password;
@@ -185,33 +146,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @return Collection<int, Listing>
-     */
     public function getListings(): Collection
     {
         return $this->listings;
     }
 
-    /**
-     * @return Collection<int, Review>
-     */
     public function getReviews(): Collection
     {
         return $this->reviews;
     }
 
-    /**
-     * @return Collection<int, User>
-     */
     public function getFollowing(): Collection
     {
         return $this->following;
     }
 
-    /**
-     * @return Collection<int, User>
-     */
     public function getFollowers(): Collection
     {
         return $this->followers;
@@ -222,9 +171,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->following->contains($user);
     }
 
-    /**
-     * Keeps both sides in sync. Following oneself is refused by FollowManager, not here.
-     */
     public function follow(self $user): static
     {
         if (!$this->following->contains($user)) {

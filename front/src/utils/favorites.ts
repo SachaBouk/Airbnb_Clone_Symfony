@@ -10,7 +10,6 @@ function readFavorites(): number[] {
   }
 }
 
-/** Favorite listings (the heart on cards), kept in this browser only. */
 export function useFavorites() {
   const [favorites, setFavorites] = useState<number[]>(readFavorites);
 

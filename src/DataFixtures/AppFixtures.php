@@ -31,7 +31,6 @@ class AppFixtures extends Fixture
         ['Florence', 'Italie'], ['Berlin', 'Allemagne'], ['Amsterdam', 'Pays-Bas'], ['Bruxelles', 'Belgique'],
     ];
 
-    /** slug => name */
     private const AMENITIES = [
         'wifi' => 'Wi-Fi', 'kitchen' => 'Cuisine équipée', 'parking' => 'Parking gratuit',
         'pool' => 'Piscine', 'air-conditioning' => 'Climatisation', 'washing-machine' => 'Lave-linge',
@@ -39,7 +38,6 @@ class AppFixtures extends Fixture
         'balcony' => 'Balcon', 'sea-view' => 'Vue sur mer', 'fireplace' => 'Cheminée',
     ];
 
-    /** @var list<User> travelers who wrote at least one review */
     private array $reviewers = [];
 
     public function __construct(
@@ -53,7 +51,7 @@ class AppFixtures extends Fixture
     {
         $faker = Factory::create('fr_FR');
         $faker->seed(2026);
-        // The purge empties the photo table without touching the disk: remove the old files too.
+
         $this->photoStorage->clear();
         $this->reviewers = [];
 
@@ -77,7 +75,7 @@ class AppFixtures extends Fixture
 
         for ($i = 0; $i < self::LISTING_COUNT; ++$i) {
             $listing = $this->createListing($manager, $faker, $hosts[$i % \count($hosts)], $amenities);
-            // traveler@example.com never reviews the first listing: see the demo stay below.
+
             $this->createBookingsAndReviews($manager, $faker, $listing, $travelers, 0 === $i ? [$travelers[0]] : []);
 
             if (0 === $i) {
@@ -85,7 +83,6 @@ class AppFixtures extends Fixture
             }
         }
 
-        // Self-referencing ManyToMany: travelers follow hosts and other travelers, hosts follow each other.
         foreach ($travelers as $traveler) {
             foreach ($faker->randomElements($hosts, $faker->numberBetween(0, 3)) as $host) {
                 $traveler->follow($host);
@@ -96,7 +93,7 @@ class AppFixtures extends Fixture
                 }
             }
         }
-        // traveler@example.com follows some reviewers, so that GET /api/feed has content in api.http.
+
         $reviewers = [];
         foreach ($this->reviewers as $reviewer) {
             if ($reviewer !== $travelers[0]) {
@@ -130,9 +127,6 @@ class AppFixtures extends Fixture
         return $user;
     }
 
-    /**
-     * @param list<Amenity> $amenities
-     */
     private function createListing(ObjectManager $manager, Generator $faker, User $host, array $amenities): Listing
     {
         [$city, $country] = $faker->randomElement(self::CITIES);
@@ -156,7 +150,6 @@ class AppFixtures extends Fixture
             ->setHost($host)
             ->replaceAmenities($listingAmenities);
 
-        // Real photos copied from data/photos/: a cover matching the type, then a few interiors.
         foreach ($this->photoLibrary->photosFor($faker, $type, $faker->numberBetween(2, 4)) as $position => $path) {
             $photo = (new Photo())->setFilename($this->photoStorage->copy($path))->setPosition($position);
             $listing->addPhoto($photo);
@@ -168,11 +161,6 @@ class AppFixtures extends Fixture
         return $listing;
     }
 
-    /**
-     * A finished, confirmed stay of traveler@example.com at the first listing (host@example.com),
-     * without review: lets api.http demo POST /api/listings/{id}/reviews.
-     * 120 days ago, so it never overlaps the generated bookings (they start at most 90 days ago).
-     */
     private function createDemoStay(ObjectManager $manager, Listing $listing, User $traveler): void
     {
         $arrival = new \DateTimeImmutable('-120 days midnight');
@@ -187,13 +175,8 @@ class AppFixtures extends Fixture
             ->setListing($listing));
     }
 
-    /**
-     * @param list<User> $travelers
-     * @param list<User> $neverReviewing travelers who must not get a generated review on this listing
-     */
     private function createBookingsAndReviews(ObjectManager $manager, Generator $faker, Listing $listing, array $travelers, array $neverReviewing = []): void
     {
-        // One review per traveler per listing (enforced by a unique constraint on Review).
         $reviewed = $neverReviewing;
 
         $today = new \DateTimeImmutable('today');

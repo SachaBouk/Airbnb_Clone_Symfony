@@ -19,12 +19,8 @@ doctrine:
 when@test:
     doctrine:
         dbal:
-            # "TEST_TOKEN" is typically set by ParaTest
             dbname_suffix: '_test%env(default::TEST_TOKEN)%'
         orm:
-            # Tests build their schema with SchemaTool, which warns without this opt-in.
-            # Not enabled in dev: on SQLite it reports false schema diffs (ON UPDATE NO ACTION),
-            # which would pollute make:migration.
             use_schema_editor_api: true
 
 when@prod:

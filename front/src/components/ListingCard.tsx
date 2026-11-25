@@ -11,7 +11,6 @@ interface ListingCardProps {
   onToggleFavorite: (listingId: number) => void;
 }
 
-/** Rating high enough to show the "Coup de cœur voyageurs" badge. */
 const GUEST_FAVORITE_RATING = 4.5;
 
 export function ListingCard({ listing, isFavorite, onToggleFavorite }: ListingCardProps) {

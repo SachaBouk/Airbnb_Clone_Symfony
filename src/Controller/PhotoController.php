@@ -22,9 +22,6 @@ final class PhotoController extends AbstractController
 {
     private const GROUPS = ['listing:read'];
 
-    /**
-     * Uploads one photo (multipart/form-data, field "photo"). It goes to the end of the gallery.
-     */
     #[Route('/listings/{id}/photos', name: 'create', requirements: ['id' => '\d+'], methods: ['POST'])]
     #[IsGranted(ListingVoter::EDIT, subject: 'listing')]
     public function create(
@@ -40,7 +37,6 @@ final class PhotoController extends AbstractController
         ?UploadedFile $photo,
         PhotoManager $photoManager,
     ): JsonResponse {
-        // Nullable on purpose: without a file, #[MapUploadedFile] skips validation and gives null.
         if (null === $photo) {
             throw new UnprocessableEntityHttpException('Envoyez une image dans le champ "photo" (multipart/form-data).');
         }
@@ -57,9 +53,6 @@ final class PhotoController extends AbstractController
         return new Response(status: Response::HTTP_NO_CONTENT);
     }
 
-    /**
-     * Makes this photo the cover (first of the gallery).
-     */
     #[Route('/photos/{id}/cover', name: 'cover', requirements: ['id' => '\d+'], methods: ['POST'])]
     #[IsGranted(PhotoVoter::EDIT, subject: 'photo')]
     public function cover(Photo $photo, PhotoManager $photoManager): JsonResponse

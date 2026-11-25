@@ -65,20 +65,10 @@ class Listing
     #[Assert\NotNull]
     private ?User $host = null;
 
-    /**
-     * @var Collection<int, Amenity>
-     */
     #[ORM\ManyToMany(targetEntity: Amenity::class, inversedBy: 'listings')]
     #[ORM\OrderBy(['name' => 'ASC'])]
     private Collection $amenities;
 
-    /**
-     * Gallery, cover first. EAGER: Doctrine loads the photos of a whole page of listings in one extra query.
-     * cascade remove + orphanRemoval: removing a listing (or a photo from it) deletes the photos,
-     * and PhotoFileRemover then deletes their files.
-     *
-     * @var Collection<int, Photo>
-     */
     #[ORM\OneToMany(targetEntity: Photo::class, mappedBy: 'listing', cascade: ['remove'], orphanRemoval: true, fetch: 'EAGER')]
     #[ORM\OrderBy(['position' => 'ASC', 'id' => 'ASC'])]
     private Collection $photos;
@@ -94,24 +84,15 @@ class Listing
         return $this->id;
     }
 
-    /**
-     * @return Collection<int, Photo>
-     */
     public function getPhotos(): Collection
     {
         return $this->photos;
     }
 
-    /**
-     * Serialized as "photos": always a JSON list (see getAmenityList()).
-     *
-     * @return list<Photo>
-     */
     #[Groups(['listing:read'])]
     #[SerializedName('photos')]
     public function getPhotoList(): array
     {
-        // Sorted here too: right after a reordering, the loaded collection is not re-sorted by Doctrine.
         $photos = $this->photos->toArray();
         usort($photos, static fn (Photo $a, Photo $b) => [$a->getPosition(), $a->getId()] <=> [$b->getPosition(), $b->getId()]);
 
@@ -135,9 +116,6 @@ class Listing
         return $this;
     }
 
-    /**
-     * URL of the cover photo, or null when the listing has no photo yet.
-     */
     #[Groups(['listing:list', 'listing:read', 'booking:read', 'review:feed'])]
     public function getCoverUrl(): ?string
     {
@@ -146,17 +124,11 @@ class Listing
         return [] === $photos ? null : $photos[0]->getUrl();
     }
 
-    /**
-     * @return Collection<int, Amenity>
-     */
     public function getAmenities(): Collection
     {
         return $this->amenities;
     }
 
-    /**
-     * @return list<Amenity>
-     */
     #[Groups(['listing:list', 'listing:read'])]
     #[SerializedName('amenities')]
     public function getAmenityList(): array
@@ -183,9 +155,6 @@ class Listing
         return $this;
     }
 
-    /**
-     * @param iterable<Amenity> $amenities
-     */
     public function replaceAmenities(iterable $amenities): static
     {
         foreach ($this->amenities->toArray() as $amenity) {

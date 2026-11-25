@@ -84,9 +84,6 @@ class Booking
         return $this->id;
     }
 
-    /**
-     * Number of nights between arrival and departure (0 while the dates are not both set).
-     */
     #[Groups(['booking:read'])]
     public function getNights(): int
     {

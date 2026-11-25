@@ -8,11 +8,6 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
-/**
- * Decides who may change a review: only its author.
- *
- * @extends Voter<string, Review>
- */
 final class ReviewVoter extends Voter
 {
     public const EDIT = 'REVIEW_EDIT';

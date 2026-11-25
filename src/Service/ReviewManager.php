@@ -11,10 +11,6 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
-/**
- * Creates, updates and deletes reviews. Who may do it is decided by
- * ListingVoter::REVIEW (create) and ReviewVoter (update / delete).
- */
 final readonly class ReviewManager
 {
     private const ALREADY_REVIEWED = 'Vous avez déjà laissé un avis sur ce logement : modifiez-le plutôt.';
@@ -25,9 +21,6 @@ final readonly class ReviewManager
     ) {
     }
 
-    /**
-     * @throws ConflictHttpException when $author already reviewed $listing
-     */
     public function create(Listing $listing, User $author, ReviewInput $input): Review
     {
         if (null !== $this->reviewRepository->findOneBy(['listing' => $listing, 'author' => $author])) {
@@ -45,7 +38,6 @@ final readonly class ReviewManager
         try {
             $this->em->flush();
         } catch (UniqueConstraintViolationException $e) {
-            // Two simultaneous requests: the unique constraint on (author, listing) caught the second one.
             throw new ConflictHttpException(self::ALREADY_REVIEWED, $e);
         }
 

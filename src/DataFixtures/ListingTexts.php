@@ -4,13 +4,8 @@ namespace App\DataFixtures;
 
 use Faker\Generator;
 
-/**
- * Realistic French texts for the fixtures: listing descriptions built from the listing's
- * type, city and amenities, and review comments that match their rating.
- */
 final class ListingTexts
 {
-    /** Listing type => opening sentences (one is picked). */
     private const INTRODUCTIONS = [
         'Appartement lumineux' => [
             'Bienvenue dans cet appartement baigné de lumière, avec de grandes fenêtres et un beau parquet ancien.',
@@ -46,7 +41,6 @@ final class ListingTexts
         ],
     ];
 
-    /** Sentences about the location; %s is replaced by the city. */
     private const LOCATIONS = [
         'Le logement se trouve en plein cœur de %s, à quelques minutes à pied des restaurants, des boutiques et des principaux sites.',
         'Situé dans un quartier résidentiel et paisible de %s, il reste très bien desservi par les transports en commun.',
@@ -68,7 +62,6 @@ final class ListingTexts
         'Un guide avec mes recommandations de restaurants et de balades vous attend à votre arrivée.',
     ];
 
-    /** Rating => review comments; %1$s = host first name, %2$s = city. */
     private const REVIEWS = [
         5 => [
             'Séjour parfait ! Le logement est encore plus beau qu’en photo et %1$s a été aux petits soins. Je recommande les yeux fermés.',
@@ -98,20 +91,13 @@ final class ListingTexts
         ],
     ];
 
-    /** Listing type whose description promises a pool: such listings always get the "pool" amenity. */
     public const TYPE_WITH_POOL = 'Villa avec piscine';
 
-    /** @return list<string> */
     public static function listingTypes(): array
     {
         return array_keys(self::INTRODUCTIONS);
     }
 
-    /**
-     * Three paragraphs separated by a blank line: the place, its location and interior, practical details.
-     *
-     * @param list<string> $amenityNames
-     */
     public static function description(Generator $faker, string $listingType, string $city, array $amenityNames): string
     {
         $paragraphs = [

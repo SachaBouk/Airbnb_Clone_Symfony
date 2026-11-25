@@ -35,9 +35,6 @@ class Amenity
     #[Assert\Regex('/^[a-z0-9-]+$/')]
     private ?string $slug = null;
 
-    /**
-     * @var Collection<int, Listing>
-     */
     #[ORM\ManyToMany(targetEntity: Listing::class, mappedBy: 'amenities')]
     private Collection $listings;
 
@@ -75,9 +72,6 @@ class Amenity
         return $this;
     }
 
-    /**
-     * @return Collection<int, Listing>
-     */
     public function getListings(): Collection
     {
         return $this->listings;

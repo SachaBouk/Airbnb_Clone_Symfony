@@ -269,7 +269,7 @@ final class ReviewControllerTest extends WebTestCase
     private function createReview(User $author, int $rating, string $createdAt = 'now'): Review
     {
         $review = (new Review())->setRating($rating)->setComment('Commentaire')->setAuthor($author)->setListing($this->listing);
-        // createdAt has no setter (it is set at creation): backdate it for the feed ordering test.
+
         (new \ReflectionProperty(Review::class, 'createdAt'))->setValue($review, new \DateTimeImmutable($createdAt));
         $this->em->persist($review);
         $this->em->flush();

@@ -28,9 +28,6 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->flush();
     }
 
-    /**
-     * Users who follow $user (for GET /api/users/{id}/followers).
-     */
     public function followersQuery(User $user): QueryBuilder
     {
         return $this->createQueryBuilder('u')
@@ -40,9 +37,6 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->orderBy('u.id', 'ASC');
     }
 
-    /**
-     * Users that $user follows (for GET /api/users/{id}/following).
-     */
     public function followingQuery(User $user): QueryBuilder
     {
         return $this->createQueryBuilder('u')

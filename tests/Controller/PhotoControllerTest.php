@@ -168,15 +168,11 @@ final class PhotoControllerTest extends WebTestCase
         $this->client->request('POST', $this->photosUri(), files: ['photo' => $file], server: $as ? $this->auth($as) : []);
     }
 
-    /**
-     * @return array<string, string>
-     */
     private function auth(User $user): array
     {
         return ['HTTP_AUTHORIZATION' => 'Bearer '.self::getContainer()->get(JWTTokenManagerInterface::class)->create($user)];
     }
 
-    /** A real 20x20 image generated with GD. */
     private function image(string $type): UploadedFile
     {
         $path = tempnam(sys_get_temp_dir(), 'photo');

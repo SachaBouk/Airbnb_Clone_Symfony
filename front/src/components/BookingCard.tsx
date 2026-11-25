@@ -13,11 +13,10 @@ interface BookingCardProps {
   maxGuests: number;
   averageRating: number | null;
   reviewCount: number;
-  /** Called after a successful booking (e.g. to refresh the host's list). */
+
   onBooked?: () => void;
 }
 
-/** Sticky price card: picks dates and guests, then books through POST /api/listings/{id}/bookings. */
 export function BookingCard({ listingId, hostId, priceByNight, maxGuests, averageRating, reviewCount, onBooked }: BookingCardProps) {
   const { user, openLogin } = useAuth();
   const [arrival, setArrival] = useState('');

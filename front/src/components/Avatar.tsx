@@ -6,7 +6,6 @@ interface AvatarProps {
   size?: number;
 }
 
-/** Initial-letter avatar (the API has no profile pictures). */
 export function Avatar({ user, size = 40 }: AvatarProps) {
   return (
     <span

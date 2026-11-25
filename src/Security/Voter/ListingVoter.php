@@ -9,15 +9,6 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
-/**
- * Decides what a user may do with a listing:
- * - EDIT / DELETE: only its host;
- * - REVIEW: only a traveler (not the host) who has finished a confirmed stay there;
- * - BOOK: any logged-in user except its host;
- * - VIEW_BOOKINGS: only its host.
- *
- * @extends Voter<string, Listing>
- */
 final class ListingVoter extends Voter
 {
     public const EDIT = 'LISTING_EDIT';

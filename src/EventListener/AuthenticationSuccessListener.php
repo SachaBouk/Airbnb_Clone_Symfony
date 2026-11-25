@@ -7,12 +7,6 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
-/**
- * Enriches the login response: besides the token, the client receives its
- * lifetime ("ttl", in seconds) and the logged-in user (group "user:read").
- *
- * Registered in config/services.yaml on lexik_jwt_authentication.on_authentication_success.
- */
 final class AuthenticationSuccessListener
 {
     public function __construct(

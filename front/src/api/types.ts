@@ -1,5 +1,3 @@
-/** Shapes of the JSON returned by the Symfony API. */
-
 export interface UserPublic {
   id: number;
   firstName: string;
@@ -14,11 +12,10 @@ export interface Me extends UserPublic {
 
 export interface Photo {
   id: number;
-  /** Relative URL, e.g. "/uploads/listings/3f9a….jpg". */
+
   url: string;
 }
 
-/** The short form of a listing embedded in bookings and reviews. */
 export interface ListingRef {
   id: number;
   title: string;
@@ -34,18 +31,18 @@ export interface Amenity {
 export interface ListingSummary {
   id: number;
   title: string;
-  /** Decimal as a string, e.g. "120.00". */
+
   priceByNight: string;
   city: string;
   country: string;
   maxGuests: number;
   host: UserPublic;
   amenities: Amenity[];
-  /** First uploaded photo, or null when the host has not uploaded any yet. */
+
   coverUrl: string | null;
   averageRating: number | null;
   reviewCount: number;
-  /** Present only when logged in: my own rating, or null. */
+
   myRating?: number | null;
 }
 
@@ -60,7 +57,7 @@ export interface ListingDetail {
   host: UserPublic;
   amenities: Amenity[];
   coverUrl: string | null;
-  /** Gallery, cover first. */
+
   photos: Photo[];
   createdAt?: string | null;
 }
@@ -113,12 +110,12 @@ export type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
 
 export interface Booking {
   id: number;
-  /** "YYYY-MM-DD" */
+
   arrivalDate: string;
   departureDate: string;
   guests: number;
   nights: number;
-  /** Decimal as a string, e.g. "360.00". */
+
   totalPrice: string;
   status: BookingStatus;
   traveler: UserPublic;

@@ -8,13 +8,6 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
-/**
- * Decides what a user may do with a booking:
- * - VIEW / CANCEL: its traveler or the host of the listing;
- * - CONFIRM: only the host of the listing.
- *
- * @extends Voter<string, Booking>
- */
 final class BookingVoter extends Voter
 {
     public const VIEW = 'BOOKING_VIEW';

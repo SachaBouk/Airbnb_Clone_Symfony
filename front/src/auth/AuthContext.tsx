@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setSessionExpiredHandler(() => setUser(null));
-    // A token kept from a previous visit: reload the user it belongs to.
+
     if (getToken()) {
       api<Me>('/user').then(setUser).catch(logout);
     }

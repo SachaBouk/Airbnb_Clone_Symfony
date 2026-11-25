@@ -12,7 +12,6 @@ interface PhotosEditorProps {
   onChange: (photos: Photo[]) => void;
 }
 
-/** Host's photo manager: upload (several at once), delete, choose the cover (first photo). */
 export function PhotosEditor({ listingId, photos, onChange }: PhotosEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<string[]>([]);
@@ -23,7 +22,6 @@ export function PhotosEditor({ listingId, photos, onChange }: PhotosEditorProps)
     event.target.value = '';
     setErrors([]);
 
-    // One request per file, one after the other, so that each error names its file.
     let current = photos;
     for (const file of files) {
       setUploading((count) => count + 1);

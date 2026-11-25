@@ -6,9 +6,6 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ListingInput
 {
-    /**
-     * @param list<int> $amenityIds
-     */
     public function __construct(
         #[Assert\NotBlank]
         #[Assert\Length(max: 255)]

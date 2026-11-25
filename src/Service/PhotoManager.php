@@ -8,9 +8,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
-/**
- * Adds, removes and reorders the photos of a listing. Only its host may do it (checked by the controller).
- */
 final readonly class PhotoManager
 {
     public const MAX_PHOTOS = 10;
@@ -21,9 +18,6 @@ final readonly class PhotoManager
     ) {
     }
 
-    /**
-     * @throws UnprocessableEntityHttpException when the listing already has MAX_PHOTOS photos
-     */
     public function add(Listing $listing, UploadedFile $file): Photo
     {
         if ($listing->getPhotos()->count() >= self::MAX_PHOTOS) {
@@ -39,7 +33,6 @@ final readonly class PhotoManager
             $this->em->persist($photo);
             $this->em->flush();
         } catch (\Throwable $exception) {
-            // Do not leave a file that no photo refers to.
             $this->storage->remove($filename);
             throw $exception;
         }
@@ -47,9 +40,6 @@ final readonly class PhotoManager
         return $photo;
     }
 
-    /**
-     * Its file is deleted by PhotoFileRemover once the row is gone.
-     */
     public function remove(Photo $photo): void
     {
         $photo->getListing()?->removePhoto($photo);
@@ -57,9 +47,6 @@ final readonly class PhotoManager
         $this->em->flush();
     }
 
-    /**
-     * Makes $photo the cover: it moves to the first position, the others keep their order.
-     */
     public function makeCover(Photo $photo): void
     {
         $others = $photo->getListing()->getPhotos()->filter(static fn (Photo $other) => $other !== $photo);

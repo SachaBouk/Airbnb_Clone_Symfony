@@ -80,7 +80,6 @@ final class BookingControllerTest extends WebTestCase
         $this->createBooking($other, '+10 days', '+15 days', BookingStatus::Cancelled);
         $this->createBooking($other, '+20 days', '+25 days', BookingStatus::Pending);
 
-        // Overlaps only the cancelled stay, and leaves the day the pending one starts.
         $this->send('POST', $this->bookingsUri(), $this->payload('+12 days', '+20 days', 1), as: $this->traveler);
 
         self::assertResponseStatusCodeSame(201);

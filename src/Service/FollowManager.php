@@ -6,10 +6,6 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
-/**
- * Follow / unfollow between users. Both operations are idempotent:
- * following someone already followed (or unfollowing someone not followed) changes nothing.
- */
 final readonly class FollowManager
 {
     public function __construct(
@@ -17,9 +13,6 @@ final readonly class FollowManager
     ) {
     }
 
-    /**
-     * @throws UnprocessableEntityHttpException when a user tries to follow themselves
-     */
     public function follow(User $follower, User $followed): void
     {
         if ($follower->getId() === $followed->getId()) {

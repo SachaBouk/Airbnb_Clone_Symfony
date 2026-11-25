@@ -5,13 +5,8 @@ namespace App\DataFixtures;
 use Faker\Generator;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
-/**
- * The sample photos of data/photos/, sorted by kind of place:
- * one folder per category (villa, chalet, house, apartment, loft) for covers, plus interior/ for the gallery.
- */
 final class PhotoLibrary
 {
-    /** Listing type (see ListingTexts) => folder of its cover photos. */
     private const CATEGORY_OF_TYPE = [
         'Appartement lumineux' => 'apartment',
         'Studio cosy' => 'apartment',
@@ -31,11 +26,6 @@ final class PhotoLibrary
     ) {
     }
 
-    /**
-     * Paths of the photos of one listing: a cover matching its type, then $interiorCount different interiors.
-     *
-     * @return list<string>
-     */
     public function photosFor(Generator $faker, string $listingType, int $interiorCount): array
     {
         $covers = $this->files(self::CATEGORY_OF_TYPE[$listingType] ?? 'house');
@@ -44,9 +34,6 @@ final class PhotoLibrary
         return [$faker->randomElement($covers), ...$faker->randomElements($interiors, min($interiorCount, \count($interiors)))];
     }
 
-    /**
-     * @return list<string>
-     */
     private function files(string $folder): array
     {
         $files = glob($this->directory.'/'.$folder.'/*.jpg') ?: [];

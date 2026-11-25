@@ -11,7 +11,6 @@ export function formatStay(booking: Booking): string {
   return `${dayFormatter.format(new Date(booking.arrivalDate))} → ${dayFormatter.format(new Date(booking.departureDate))}`;
 }
 
-/** Bookings of a listing, shown to its host, who confirms or cancels them. */
 export function HostBookings({ listingId, refreshKey }: { listingId: number; refreshKey: number }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [error, setError] = useState<string | null>(null);

@@ -5,9 +5,6 @@ namespace App\Model;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
-/**
- * Query string of GET /api/listings: filters + page/limit (inherited from PaginationDTO).
- */
 final readonly class ListingSearch extends PaginationDTO
 {
     public const SORT_RATING = 'rating';
@@ -38,7 +35,6 @@ final readonly class ListingSearch extends PaginationDTO
 
         public ?\DateTimeImmutable $availableTo = null,
 
-        /** null = by id; "rating" = best average first; "price_asc" / "price_desc" = by price per night. */
         #[Assert\Choice(choices: self::SORTS)]
         public ?string $sort = null,
 

@@ -10,7 +10,6 @@ const EMPTY_FORM = { title: '', description: '', priceByNight: '', city: '', cou
 
 type FormState = typeof EMPTY_FORM;
 
-/** Create (/host/listings/new) or edit (/host/listings/:id/edit) a listing. */
 export function ListingFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -83,7 +82,7 @@ export function ListingFormPage() {
     };
     try {
       const saved = await api<ListingDetail>(id ? `/listings/${id}` : '/listings', { method: id ? 'PUT' : 'POST', body });
-      // A new listing has no photo yet: continue on its edit page, photos section.
+
       navigate(id ? `/listings/${saved.id}` : `/host/listings/${saved.id}/edit?photos#photos`);
     } catch (exception) {
       setError(exception instanceof ApiError ? exception : new ApiError(0, 'Enregistrement impossible.'));

@@ -24,12 +24,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/api', name: 'app_bookings_', format: 'json')]
 final class BookingController extends AbstractController
 {
-    /** A booking with its traveler (first name) and its listing (id, title, city, country). */
     private const GROUPS = ['booking:read', 'user:public'];
 
-    /**
-     * The logged-in user books listing {id}. The booking starts "pending" until the host confirms it.
-     */
     #[Route('/listings/{id}/bookings', name: 'create', requirements: ['id' => '\d+'], methods: ['POST'])]
     #[IsGranted(ListingVoter::BOOK, subject: 'listing')]
     public function create(
@@ -45,9 +41,6 @@ final class BookingController extends AbstractController
         ], ['groups' => self::GROUPS]);
     }
 
-    /**
-     * The trips of the logged-in user, latest arrival first.
-     */
     #[Route('/bookings', name: 'mine', methods: ['GET'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function mine(
@@ -61,9 +54,6 @@ final class BookingController extends AbstractController
         return $this->json($page, context: ['groups' => ['paginate', ...self::GROUPS]]);
     }
 
-    /**
-     * The bookings of listing {id}, for its host.
-     */
     #[Route('/listings/{id}/bookings', name: 'for_listing', requirements: ['id' => '\d+'], methods: ['GET'])]
     #[IsGranted(ListingVoter::VIEW_BOOKINGS, subject: 'listing')]
     public function forListing(

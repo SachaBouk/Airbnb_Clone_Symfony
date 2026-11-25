@@ -5,7 +5,6 @@ import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { formatMonthYear } from '../utils/format';
 
-/** The logged-in user: profile, who he follows and who follows him. */
 export function AccountPage() {
   const { user, openLogin } = useAuth();
   const [following, setFollowing] = useState<UserPublic[]>([]);

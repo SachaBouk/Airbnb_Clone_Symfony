@@ -9,10 +9,6 @@ use App\Tests\ResetDatabaseTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-/**
- * The OneToMany (User → listings, User → reviews) and the self-referencing
- * ManyToMany (followers) are loaded back correctly from the database.
- */
 final class UserRelationsTest extends KernelTestCase
 {
     use ResetDatabaseTrait;
@@ -32,7 +28,7 @@ final class UserRelationsTest extends KernelTestCase
         $author = $this->createUser('author@example.com');
         $studio = $this->createListing($host, 'Studio');
         $villa = $this->createListing($host, 'Villa');
-        // One review per author per listing: one on each listing.
+
         $this->createReview($studio, $author, 5);
         $this->createReview($villa, $author, 3);
         $this->em->flush();

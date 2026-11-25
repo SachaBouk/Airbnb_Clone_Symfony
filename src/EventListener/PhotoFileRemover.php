@@ -7,10 +7,6 @@ use App\Service\PhotoStorage;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
 use Doctrine\ORM\Events;
 
-/**
- * Deletes the file of a photo once its row is deleted, whatever the reason:
- * DELETE /api/photos/{id}, or the deletion of its listing (cascade).
- */
 #[AsEntityListener(event: Events::postRemove, method: 'postRemove', entity: Photo::class)]
 final readonly class PhotoFileRemover
 {

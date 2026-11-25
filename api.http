@@ -439,7 +439,7 @@ Content-Type: image/jpeg
 < ./data/photos/villa/villa-01.jpg
 --EscaleBoundary--
 
-### Deuxième photo
+### Deuxième photo → 201
 # @name photo2
 POST {{baseUrl}}/api/listings/{{listings.response.body.$.items[0].id}}/photos
 Accept: {{json}}
@@ -496,11 +496,11 @@ Content-Type: image/jpeg
 < ./data/photos/villa/villa-01.jpg
 --EscaleBoundary--
 
-### Supprimer les photos (et leurs fichiers) → 204
+### Supprimer la première photo (et son fichier) → 204
 DELETE {{baseUrl}}/api/photos/{{photo1.response.body.$.id}}
 Authorization: Bearer {{loginHost.response.body.$.token}}
 
-###
+### Supprimer la deuxième photo (et son fichier) → 204
 DELETE {{baseUrl}}/api/photos/{{photo2.response.body.$.id}}
 Authorization: Bearer {{loginHost.response.body.$.token}}
 

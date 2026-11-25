@@ -25,9 +25,6 @@ final class ListingController extends AbstractController
 {
     private const DETAIL_GROUPS = ['listing:read', 'user:public', 'all:read'];
 
-    /**
-     * Public. With a valid JWT, each listing also gets "myRating" (the user's own rating).
-     */
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(
         ListingRepository $listingRepository,
@@ -39,7 +36,6 @@ final class ListingController extends AbstractController
         $page = $listingRepository->search($search);
         $ids = array_map(static fn (Listing $listing) => $listing->getId(), $page->items);
 
-        // Computed once for the whole page, then added to each listing by ListingNormalizer.
         $context = [
             'groups' => ['paginate', 'listing:list', 'user:public'],
             ListingNormalizer::STATS => $reviewRepository->statsForListings($ids),

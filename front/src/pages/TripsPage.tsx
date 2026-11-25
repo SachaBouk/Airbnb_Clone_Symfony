@@ -8,7 +8,6 @@ import { formatStay } from '../components/HostBookings';
 import { formatPrice, plural } from '../utils/format';
 import { listingCover } from '../utils/images';
 
-/** The trips of the logged-in user (GET /api/bookings), with cancellation. */
 export function TripsPage() {
   const { user, openLogin } = useAuth();
   const [bookings, setBookings] = useState<Booking[] | null>(null);

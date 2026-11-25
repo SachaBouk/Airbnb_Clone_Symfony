@@ -1,12 +1,5 @@
-/**
- * Listing photos. Photos uploaded by the host (served by the API under /uploads) always come first.
- * A listing without uploads gets stable placeholder photos (same listing → same photos) from curated
- * free Unsplash pictures, chosen according to the kind of place its title describes.
- */
-
 type Category = 'villa' | 'chalet' | 'house' | 'apartment' | 'loft';
 
-/** Cover photos (photo n°0) of each category. */
 const COVERS: Record<Category, string[]> = {
   villa: [
     '1512917774080-9991f1c4c750', '1564013799919-ab600027ffc6', '1580587771525-78b9dba3b914',
@@ -24,7 +17,7 @@ const COVERS: Record<Category, string[]> = {
     '1572120360610-d971b9d7767c', '1570129477492-45c003edd2be', '1583608205776-bfd35f0d9f83',
     '1449844908441-8829872d2607', '1494526585095-c41746248156',
   ],
-  // Apartments show either their building or their living room, as on listing sites.
+
   apartment: [
     '1545324418-cc1a3fa10c00', '1460317442991-0ec209397118', '1551361415-69c87624334f',
     '1574362848149-11496d93a7c7', '1522050212171-61b01dd24579', '1554995207-c18c203602cb', '1600607687939-ce8a6c25118c',
@@ -37,7 +30,6 @@ const COVERS: Record<Category, string[]> = {
   ],
 };
 
-/** Living rooms, bedrooms and kitchens used for the rest of the gallery (photos n°1 to 4). */
 const INTERIORS = [
   '1505691938895-1758d7feb511', '1522708323590-d24dbb6b0267', '1502672260266-1c1ef2d93688',
   '1560448204-e02f11c3d0e2', '1493809842364-78817add7ffb', '1484154218962-a197022b5858',
@@ -49,7 +41,6 @@ const INTERIORS = [
   '1598928506311-c55ded91a20c', '1522771739844-6a9f6d5f14af', '1484101403633-562f891dc89a',
 ];
 
-/** First matching keyword of the title decides the category (titles are lowercased, accents removed). */
 const KEYWORDS: [Category, string[]][] = [
   ['loft', ['loft', 'atelier']],
   ['chalet', ['chalet', 'cabane', 'refuge']],
@@ -68,18 +59,14 @@ function categoryOf(title: string): Category {
 interface PhotoSubject {
   id: number;
   title: string;
-  /** Uploaded cover, if any. */
+
   coverUrl?: string | null;
 }
 
-/** Cover of a listing: the uploaded one, otherwise a placeholder. */
 export function listingCover(listing: PhotoSubject, width = 720, height = 680): string {
   return listing.coverUrl ?? placeholderPhoto(listing, 0, width, height);
 }
 
-/**
- * Up to 5 photos for the gallery: the uploaded ones when there are any, otherwise 5 placeholders.
- */
 export function galleryPhotos(listing: PhotoSubject & { photos: { url: string }[] }): string[] {
   if (listing.photos.length > 0) {
     return listing.photos.slice(0, 5).map((photo) => photo.url);
@@ -88,13 +75,12 @@ export function galleryPhotos(listing: PhotoSubject & { photos: { url: string }[
   return [0, 1, 2, 3, 4].map((index) => placeholderPhoto(listing, index, index === 0 ? 1200 : 600, index === 0 ? 900 : 450));
 }
 
-/** Placeholder n°index of a listing: 0 = cover matching its kind of place, 1 to 4 = interiors. */
 function placeholderPhoto(listing: PhotoSubject, index: number, width: number, height: number): string {
   const cover = pick(COVERS[categoryOf(listing.title)], listing.id);
   let photoId = cover;
 
   if (index > 0) {
-    // Consecutive interiors, skipping the cover when it is itself an interior (apartments, lofts).
+
     const interiors = INTERIORS.filter((interior) => interior !== cover);
     photoId = pick(interiors, listing.id * 3 + index - 1);
   }
@@ -108,7 +94,6 @@ function pick(photos: string[], seed: number): string {
 
 const AVATAR_COLORS = ['#222222', '#e0565b', '#008489', '#914669', '#c13515', '#428bff', '#3f8a3a'];
 
-/** Background color of an initial-letter avatar, stable for a given user. */
 export function avatarColor(userId: number): string {
   return AVATAR_COLORS[userId % AVATAR_COLORS.length];
 }

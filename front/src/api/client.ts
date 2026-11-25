@@ -1,7 +1,3 @@
-/**
- * Minimal fetch wrapper for the Symfony API: JSON in/out, JWT header, typed errors.
- */
-
 export interface Violation {
   propertyPath: string;
   title: string;
@@ -16,7 +12,6 @@ export class ApiError extends Error {
     super(message);
   }
 
-  /** Validation message of one field (422), if any. */
   fieldError(field: string): string | undefined {
     return this.violations.find((violation) => violation.propertyPath === field)?.title;
   }
@@ -40,7 +35,6 @@ export function getToken(): string | null {
   return token;
 }
 
-/** Called when the API rejects the stored token (expired after 1 hour). */
 export function setSessionExpiredHandler(handler: () => void): void {
   onSessionExpired = handler;
 }
@@ -52,7 +46,7 @@ interface RequestOptions {
 
 export async function api<T>(path: string, { method = 'GET', body }: RequestOptions = {}): Promise<T> {
   const sentToken = token;
-  // FormData (file upload) is sent as-is: the browser sets the multipart Content-Type itself.
+
   const isFormData = body instanceof FormData;
   const response = await fetch(`/api${path}`, {
     method,
@@ -67,7 +61,7 @@ export async function api<T>(path: string, { method = 'GET', body }: RequestOpti
   if (response.status === 401 && sentToken) {
     setToken(null);
     onSessionExpired?.();
-    // Public pages still work without the expired token.
+
     if (method === 'GET') {
       return api<T>(path, { method, body });
     }
@@ -100,6 +94,5 @@ function readableMessage(status: number, data: ErrorBody | null): string {
   }
   const message = data?.detail ?? data?.message ?? 'Une erreur est survenue.';
 
-  // Symfony prefixes voter refusals with "Access Denied.": keep the explanation only.
   return message.replace(/^Access Denied\.\s*/, '') || "Vous n'avez pas le droit de faire cette action.";
 }

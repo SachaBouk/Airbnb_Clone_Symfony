@@ -8,11 +8,6 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
-/**
- * Only the host of the listing may delete a photo or make it the cover.
- *
- * @extends Voter<string, Photo>
- */
 final class PhotoVoter extends Voter
 {
     public const EDIT = 'PHOTO_EDIT';

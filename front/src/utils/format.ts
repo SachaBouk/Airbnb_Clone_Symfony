@@ -10,7 +10,6 @@ export function formatRating(rating: number): string {
   return ratingFormatter.format(rating);
 }
 
-/** "novembre 2026" */
 export function formatMonthYear(date: string | null | undefined): string {
   return date ? monthYearFormatter.format(new Date(date)) : '';
 }
@@ -19,7 +18,6 @@ export function plural(count: number, singular: string, pluralForm = `${singular
   return `${count} ${count > 1 ? pluralForm : singular}`;
 }
 
-/** Number of nights between two "YYYY-MM-DD" dates (0 if incomplete or inverted). */
 export function nightsBetween(from: string, to: string): number {
   if (!from || !to) {
     return 0;

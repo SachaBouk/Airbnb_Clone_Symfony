@@ -20,9 +20,6 @@ final class UserController extends AbstractController
 {
     private const LIST_GROUPS = ['paginate', 'user:public'];
 
-    /**
-     * Returns the user identified by the JWT sent in "Authorization: Bearer <token>".
-     */
     #[Route('/user', name: 'app_users_me', methods: ['GET'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function me(#[CurrentUser] ?User $user): JsonResponse
@@ -30,9 +27,6 @@ final class UserController extends AbstractController
         return $this->json($user, context: ['groups' => ['user:read', 'all:read']]);
     }
 
-    /**
-     * The logged-in user starts following user {id}.
-     */
     #[Route('/users/{id}/follow', name: 'app_users_follow', requirements: ['id' => '\d+'], methods: ['POST'])]
     #[IsGranted('ROLE_USER')]
     public function follow(User $followed, #[CurrentUser] User $user, FollowManager $followManager): Response
@@ -42,9 +36,6 @@ final class UserController extends AbstractController
         return new Response(status: Response::HTTP_NO_CONTENT);
     }
 
-    /**
-     * The logged-in user stops following user {id}.
-     */
     #[Route('/users/{id}/follow', name: 'app_users_unfollow', requirements: ['id' => '\d+'], methods: ['DELETE'])]
     #[IsGranted('ROLE_USER')]
     public function unfollow(User $followed, #[CurrentUser] User $user, FollowManager $followManager): Response
@@ -54,9 +45,6 @@ final class UserController extends AbstractController
         return new Response(status: Response::HTTP_NO_CONTENT);
     }
 
-    /**
-     * Paginated list of the users who follow user {id}.
-     */
     #[Route('/users/{id}/followers', name: 'app_users_followers', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function followers(
         User $user,
@@ -69,9 +57,6 @@ final class UserController extends AbstractController
         return $this->json($page, context: ['groups' => self::LIST_GROUPS]);
     }
 
-    /**
-     * Paginated list of the users that user {id} follows.
-     */
     #[Route('/users/{id}/following', name: 'app_users_following', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function following(
         User $user,

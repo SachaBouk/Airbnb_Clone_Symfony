@@ -7,16 +7,12 @@ use App\Repository\PhotoRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 
-/**
- * A photo of a listing. The file lives in public/uploads/listings/, only its name is stored here.
- */
 #[ORM\Entity(repositoryClass: PhotoRepository::class)]
 #[ORM\HasLifecycleCallbacks]
 class Photo
 {
     use TimestampableTrait;
 
-    /** Public URL prefix of the photo files (under the public/ directory). */
     public const PUBLIC_PATH = '/uploads/listings';
 
     #[Groups(['listing:read'])]
@@ -25,11 +21,9 @@ class Photo
     #[ORM\Column]
     private ?int $id = null;
 
-    /** Unique file name generated at upload, e.g. "3f9a…c2.jpg". */
     #[ORM\Column(length: 255)]
     private ?string $filename = null;
 
-    /** Order in the gallery: the photo with the lowest position is the cover. */
     #[ORM\Column]
     private int $position = 0;
 

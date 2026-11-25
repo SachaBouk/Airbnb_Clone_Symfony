@@ -15,12 +15,6 @@ use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-/**
- * Books, confirms and cancels stays. Who may do it is decided by
- * ListingVoter::BOOK (create) and BookingVoter (confirm / cancel).
- *
- * Lifecycle: pending → confirmed (by the host) ; pending or confirmed → cancelled (traveler or host, before arrival).
- */
 final readonly class BookingManager
 {
     public function __construct(
@@ -31,10 +25,6 @@ final readonly class BookingManager
     ) {
     }
 
-    /**
-     * @throws UnprocessableEntityHttpException when the booking is invalid (e.g. too many guests)
-     * @throws ConflictHttpException            when the dates are already taken
-     */
     public function create(Listing $listing, User $traveler, BookingInput $input): Booking
     {
         $booking = (new Booking())
@@ -43,7 +33,7 @@ final readonly class BookingManager
             ->setArrivalDate($input->arrivalDate)
             ->setDepartureDate($input->departureDate)
             ->setGuests($input->guests);
-        // The price is always computed here, never sent by the client.
+
         $booking->setTotalPrice(number_format($booking->getNights() * (float) $listing->getPriceByNight(), 2, '.', ''));
 
         $violations = $this->validator->validate($booking);
@@ -51,7 +41,6 @@ final readonly class BookingManager
             throw new UnprocessableEntityHttpException(previous: new ValidationFailedException($booking, $violations));
         }
 
-        // Without the lock, two simultaneous requests could both see the dates as free and both book them.
         $lock = $this->lockFactory->createLock('listing-booking-'.$listing->getId());
         $lock->acquire(true);
         try {
@@ -68,9 +57,6 @@ final readonly class BookingManager
         return $booking;
     }
 
-    /**
-     * @throws ConflictHttpException when the booking is not pending
-     */
     public function confirm(Booking $booking): Booking
     {
         if (BookingStatus::Pending !== $booking->getStatus()) {
@@ -83,9 +69,6 @@ final readonly class BookingManager
         return $booking;
     }
 
-    /**
-     * @throws ConflictHttpException when the booking is already cancelled or the stay has begun
-     */
     public function cancel(Booking $booking): Booking
     {
         if (BookingStatus::Cancelled === $booking->getStatus()) {

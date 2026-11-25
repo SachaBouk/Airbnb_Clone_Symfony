@@ -3,7 +3,6 @@ import { api } from '../api/client';
 import type { Page, UserPublic } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 
-/** Follow / unfollow a user. Hidden on one's own profile. */
 export function FollowButton({ userId }: { userId: number }) {
   const { user, openLogin } = useAuth();
   const [isFollowing, setFollowing] = useState(false);

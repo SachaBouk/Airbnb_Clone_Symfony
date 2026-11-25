@@ -19,9 +19,6 @@ class ListingRepository extends ServiceEntityRepository
         parent::__construct($registry, Listing::class);
     }
 
-    /**
-     * @return Paginator<Listing>
-     */
     public function search(ListingSearch $search): Paginator
     {
         $qb = $this->createQueryBuilder('l')
@@ -30,7 +27,6 @@ class ListingRepository extends ServiceEntityRepository
             ->leftJoin('l.amenities', 'a');
 
         match ($search->sort) {
-            // Listings without review count as 0 (COALESCE), so they come last.
             ListingSearch::SORT_RATING => $qb
                 ->addSelect(\sprintf('(SELECT COALESCE(AVG(sr.rating), 0) FROM %s sr WHERE sr.listing = l) AS HIDDEN averageRating', Review::class))
                 ->orderBy('averageRating', 'DESC'),
@@ -38,11 +34,10 @@ class ListingRepository extends ServiceEntityRepository
             ListingSearch::SORT_PRICE_DESC => $qb->orderBy('l.priceByNight', 'DESC'),
             default => null,
         };
-        // Then by id, so that pages are stable when several listings tie.
+
         $qb->addOrderBy('l.id', 'ASC')->addOrderBy('a.name', 'ASC');
 
         if (null !== $search->title) {
-            // "!" escapes LIKE wildcards typed by the user (SQLite has no default escape character).
             $qb->andWhere("LOWER(l.title) LIKE LOWER(:title) ESCAPE '!'")
                 ->setParameter('title', '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search->title).'%');
         }

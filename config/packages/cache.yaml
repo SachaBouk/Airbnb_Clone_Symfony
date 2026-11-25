@@ -1,3 +1,2 @@
-# The "app" cache stores to the filesystem by default (see https://symfony.com/doc/current/cache.html).
 framework:
     cache: ~

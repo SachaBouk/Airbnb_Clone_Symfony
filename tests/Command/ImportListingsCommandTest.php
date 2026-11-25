@@ -27,7 +27,7 @@ final class ImportListingsCommandTest extends KernelTestCase
         $this->resetDatabase($this->em);
 
         $this->command = new CommandTester((new Application(self::$kernel))->find('app:import-listings'));
-        // tempnam() creates an empty file: remove it and use the same unique name with a .jsonl extension.
+
         $base = tempnam(sys_get_temp_dir(), 'listings_');
         unlink($base);
         $this->file = $base.'.jsonl';
@@ -57,9 +57,9 @@ final class ImportListingsCommandTest extends KernelTestCase
         self::assertSame(Command::SUCCESS, $exitCode);
         self::assertStringContainsString('3 logement(s) importé(s)', $this->command->getDisplay());
         self::assertSame(3, $this->em->getRepository(Listing::class)->count([]));
-        // host@example.com reused, new.host@example.com created once (email matched case-insensitively).
+
         self::assertSame(2, $this->em->getRepository(User::class)->count([]));
-        // "Wi-Fi" matched by name although its slug is "wifi"; "Sauna" created once.
+
         self::assertSame(['sauna', 'wifi'], $this->amenitySlugs());
 
         $studio = $this->em->getRepository(Listing::class)->findOneBy(['title' => 'Studio']);
@@ -110,9 +110,6 @@ final class ImportListingsCommandTest extends KernelTestCase
         self::assertStringContainsString('Impossible de lire le fichier', $this->command->getDisplay());
     }
 
-    /**
-     * @param list<string> $amenities
-     */
     private function line(string $title, string $city, string $hostEmail, array $amenities): string
     {
         return json_encode([
@@ -132,9 +129,6 @@ final class ImportListingsCommandTest extends KernelTestCase
         file_put_contents($this->file, implode("\n", $lines)."\n");
     }
 
-    /**
-     * @return list<string>
-     */
     private function amenitySlugs(): array
     {
         $slugs = array_map(static fn (Amenity $a) => $a->getSlug(), $this->em->getRepository(Amenity::class)->findAll());

@@ -16,9 +16,6 @@ class ReviewRepository extends ServiceEntityRepository
         parent::__construct($registry, Review::class);
     }
 
-    /**
-     * @return list<Review> newest first, with their author already loaded
-     */
     public function findForListing(Listing $listing): array
     {
         return $this->createQueryBuilder('r')
@@ -31,9 +28,6 @@ class ReviewRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    /**
-     * @return float|null rounded to one decimal, null when the listing has no review
-     */
     public function averageRatingFor(Listing $listing): ?float
     {
         $average = $this->createQueryBuilder('r')
@@ -46,9 +40,6 @@ class ReviewRepository extends ServiceEntityRepository
         return null === $average ? null : round((float) $average, 1);
     }
 
-    /**
-     * Latest reviews first, with author and listing loaded (GET /api/reviews).
-     */
     public function feedQuery(): QueryBuilder
     {
         return $this->createQueryBuilder('r')
@@ -59,9 +50,6 @@ class ReviewRepository extends ServiceEntityRepository
             ->addOrderBy('r.id', 'DESC');
     }
 
-    /**
-     * Latest reviews written by the users that $user follows (GET /api/feed).
-     */
     public function followingFeedQuery(User $user): QueryBuilder
     {
         return $this->feedQuery()
@@ -70,14 +58,6 @@ class ReviewRepository extends ServiceEntityRepository
             ->setParameter('user', $user);
     }
 
-    /**
-     * Average rating and review count of several listings, in a single query.
-     * Listings without review are absent from the result.
-     *
-     * @param list<int> $listingIds
-     *
-     * @return array<int, array{averageRating: float, reviewCount: int}> indexed by listing id
-     */
     public function statsForListings(array $listingIds): array
     {
         if ([] === $listingIds) {
@@ -103,13 +83,6 @@ class ReviewRepository extends ServiceEntityRepository
         return $stats;
     }
 
-    /**
-     * The rating $author gave to each of these listings, in a single query.
-     *
-     * @param list<int> $listingIds
-     *
-     * @return array<int, int> rating indexed by listing id (unrated listings are absent)
-     */
     public function ratingsByAuthor(User $author, array $listingIds): array
     {
         if ([] === $listingIds) {

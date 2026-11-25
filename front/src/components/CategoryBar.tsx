@@ -10,7 +10,6 @@ interface CategoryBarProps {
   activeFilterCount: number;
 }
 
-/** Horizontal strip of icon categories (one per amenity), like the top of a listings search page. */
 export function CategoryBar({ amenities, selected, onSelect, onOpenFilters, activeFilterCount }: CategoryBarProps) {
   return (
     <div className="category-bar">

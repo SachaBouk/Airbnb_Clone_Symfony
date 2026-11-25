@@ -140,7 +140,7 @@ final class ListingControllerTest extends WebTestCase
     {
         $host = $this->createUser('host@example.com', 'Hélène');
         $listing = $this->createListing($host, 'Paris', 2, '80.00');
-        // One review per traveler per listing: two travelers.
+
         $this->createReview($listing, $this->createUser('traveler@example.com', 'Victor'), 5);
         $this->createReview($listing, $this->createUser('other@example.com', 'Omar'), 4);
         $this->em->flush();
@@ -153,7 +153,7 @@ final class ListingControllerTest extends WebTestCase
         self::assertArrayHasKey('description', $data['listing']);
         self::assertSame(4.5, $data['averageRating']);
         self::assertSame(2, $data['reviewCount']);
-        // Public author data only (dates come from the "all:read" group): never the email.
+
         self::assertSame(['id', 'firstName', 'createdAt', 'updatedAt'], array_keys($data['reviews'][0]['author']));
         self::assertNotEmpty($data['reviews'][0]['createdAt']);
     }
@@ -239,7 +239,7 @@ final class ListingControllerTest extends WebTestCase
         $free = $this->createListing($host, 'Nice', 2, '80.00');
         $this->createBooking($booked, $traveler, '2027-07-10', '2027-07-15', BookingStatus::Confirmed);
         $this->createBooking($cancelledOnly, $traveler, '2027-07-10', '2027-07-15', BookingStatus::Cancelled);
-        // Ends the day the search starts: no overlap.
+
         $this->createBooking($free, $traveler, '2027-07-05', '2027-07-12', BookingStatus::Confirmed);
         $this->em->flush();
 
@@ -354,7 +354,7 @@ final class ListingControllerTest extends WebTestCase
         self::assertSame('Nouveau titre', $data['title']);
         self::assertSame('110.50', $data['priceByNight']);
         self::assertSame($host->getId(), $data['host']['id']);
-        // A JSON list, not an object, even though "wifi" was removed from the collection.
+
         self::assertSame(['pool', 'tv'], array_column($data['amenities'], 'slug'));
         self::assertTrue(array_is_list($data['amenities']));
     }
@@ -459,9 +459,6 @@ final class ListingControllerTest extends WebTestCase
         self::assertSame(['id', 'name', 'slug'], array_keys($this->json()[0]));
     }
 
-    /**
-     * @param list<int> $amenityIds
-     */
     private function validPayload(array $amenityIds = []): array
     {
         return [
@@ -475,9 +472,6 @@ final class ListingControllerTest extends WebTestCase
         ];
     }
 
-    /**
-     * Sends a JSON request, authenticated with a real JWT when $as is given.
-     */
     private function sendJson(string $method, string $uri, ?array $payload = null, ?User $as = null): void
     {
         $server = ['CONTENT_TYPE' => 'application/json'];

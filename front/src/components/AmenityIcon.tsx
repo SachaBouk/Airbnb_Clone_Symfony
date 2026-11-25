@@ -17,7 +17,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-/** Icon of each amenity slug known by the fixtures and the import file. */
 const ICONS: Record<string, LucideIcon> = {
   wifi: Wifi,
   kitchen: CookingPot,

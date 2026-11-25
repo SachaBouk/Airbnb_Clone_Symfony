@@ -18,10 +18,6 @@ class BookingRepository extends ServiceEntityRepository
         parent::__construct($registry, Booking::class);
     }
 
-    /**
-     * True when $traveler has a confirmed booking at $listing that is already over:
-     * the condition to be allowed to review it.
-     */
     public function hasCompletedStay(User $traveler, Listing $listing): bool
     {
         return (int) $this->createQueryBuilder('b')
@@ -38,10 +34,6 @@ class BookingRepository extends ServiceEntityRepository
             ->getSingleScalarResult() > 0;
     }
 
-    /**
-     * True when a pending or confirmed booking of $listing overlaps [$arrival, $departure[.
-     * Two stays overlap when each one starts before the other ends (checkout day = next arrival day is fine).
-     */
     public function hasOverlappingBooking(Listing $listing, \DateTimeImmutable $arrival, \DateTimeImmutable $departure): bool
     {
         return (int) $this->createQueryBuilder('b')
@@ -58,9 +50,6 @@ class BookingRepository extends ServiceEntityRepository
             ->getSingleScalarResult() > 0;
     }
 
-    /**
-     * The trips of $traveler, latest arrival first (GET /api/bookings).
-     */
     public function forTravelerQuery(User $traveler): QueryBuilder
     {
         return $this->createQueryBuilder('b')
@@ -72,9 +61,6 @@ class BookingRepository extends ServiceEntityRepository
             ->addOrderBy('b.id', 'DESC');
     }
 
-    /**
-     * The bookings of $listing, next arrival first (GET /api/listings/{id}/bookings, for its host).
-     */
     public function forListingQuery(Listing $listing): QueryBuilder
     {
         return $this->createQueryBuilder('b')

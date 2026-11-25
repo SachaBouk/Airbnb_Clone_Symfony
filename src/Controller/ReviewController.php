@@ -24,12 +24,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/api', name: 'app_reviews_', format: 'json')]
 final class ReviewController extends AbstractController
 {
-    /** A review with its dates, its author (first name) and the listing it is about (id, title). */
     private const GROUPS = ['review:read', 'review:feed', 'user:public', 'all:read'];
 
-    /**
-     * Feed of the latest reviews, all listings combined.
-     */
     #[Route('/reviews', name: 'feed', methods: ['GET'])]
     public function feed(
         ReviewRepository $reviewRepository,
@@ -41,9 +37,6 @@ final class ReviewController extends AbstractController
         return $this->json($page, context: ['groups' => ['paginate', ...self::GROUPS]]);
     }
 
-    /**
-     * Personal feed: latest reviews written by the users the logged-in user follows.
-     */
     #[Route('/feed', name: 'following_feed', methods: ['GET'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function followingFeed(
@@ -57,9 +50,6 @@ final class ReviewController extends AbstractController
         return $this->json($page, context: ['groups' => ['paginate', ...self::GROUPS]]);
     }
 
-    /**
-     * The logged-in traveler rates listing {id} (after a finished, confirmed stay).
-     */
     #[Route('/listings/{id}/reviews', name: 'create', requirements: ['id' => '\d+'], methods: ['POST'])]
     #[IsGranted(ListingVoter::REVIEW, subject: 'listing')]
     public function create(

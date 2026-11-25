@@ -4,14 +4,8 @@ namespace App\Model;
 
 use Symfony\Component\Validator\Constraints as Assert;
 
-/**
- * One line (one JSON object) of the file imported by app:import-listings.
- */
 final readonly class ListingImportRow
 {
-    /**
-     * @param list<string> $amenities amenity names, e.g. ["Wi-Fi", "Piscine"]
-     */
     public function __construct(
         #[Assert\NotBlank]
         #[Assert\Length(max: 255)]

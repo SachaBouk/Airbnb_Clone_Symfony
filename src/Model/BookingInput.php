@@ -5,9 +5,6 @@ namespace App\Model;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
-/**
- * JSON body of POST /api/listings/{id}/bookings. Dates are "YYYY-MM-DD".
- */
 final readonly class BookingInput
 {
     public const MAX_NIGHTS = 90;

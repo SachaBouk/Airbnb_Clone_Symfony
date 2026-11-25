@@ -15,9 +15,6 @@ use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 
-/**
- * Creates, updates and deletes listings from validated API input.
- */
 final readonly class ListingManager
 {
     public function __construct(
@@ -47,9 +44,6 @@ final readonly class ListingManager
         return $listing;
     }
 
-    /**
-     * @throws ConflictHttpException when bookings or reviews still reference the listing
-     */
     public function delete(Listing $listing): void
     {
         $hasHistory = $this->bookingRepository->count(['listing' => $listing]) > 0
@@ -63,11 +57,6 @@ final readonly class ListingManager
         $this->em->flush();
     }
 
-    /**
-     * The host is never taken from the input: it is set once, at creation, from the logged-in user.
-     *
-     * @throws UnprocessableEntityHttpException when an amenityId matches nothing
-     */
     private function apply(Listing $listing, ListingInput $input): void
     {
         $violations = new ConstraintViolationList();
@@ -79,7 +68,6 @@ final readonly class ListingManager
         }
 
         if (\count($violations) > 0) {
-            // Same 422 "violations" format as #[MapRequestPayload] validation errors.
             throw new UnprocessableEntityHttpException(previous: new ValidationFailedException($input, $violations));
         }
 

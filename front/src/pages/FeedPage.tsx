@@ -12,7 +12,6 @@ type Tab = 'following' | 'all';
 
 const PAGE_SIZE = 10;
 
-/** Reviews feed: from the people I follow (GET /api/feed) or from everyone (GET /api/reviews). */
 export function FeedPage() {
   const { user, openLogin } = useAuth();
   const [tab, setTab] = useState<Tab>(user ? 'following' : 'all');

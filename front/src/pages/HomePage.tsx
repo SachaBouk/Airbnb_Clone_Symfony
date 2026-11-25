@@ -10,7 +10,6 @@ import { useFavorites } from '../utils/favorites';
 
 const PAGE_SIZE = 20;
 
-/** Query string keys forwarded as-is to GET /api/listings. */
 const API_FILTERS = ['city', 'guests', 'availableFrom', 'availableTo', 'amenity', 'sort', 'maxPrice', 'title'];
 
 export function HomePage() {
@@ -42,7 +41,6 @@ export function HomePage() {
     api<Amenity[]>('/amenities').then(setAmenities).catch(() => setAmenities([]));
   }, []);
 
-  // New search (or login/logout, which changes "myRating"): restart from page 1.
   useEffect(() => {
     setPage(1);
   }, [apiQuery, user]);

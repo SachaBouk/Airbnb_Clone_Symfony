@@ -2,7 +2,6 @@ import { Search } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-/** The pill-shaped search bar: destination, dates and guests, kept in the URL query string. */
 export function SearchBar() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -11,7 +10,6 @@ export function SearchBar() {
   const [availableTo, setAvailableTo] = useState('');
   const [guests, setGuests] = useState('');
 
-  // Keep the fields in sync when the URL changes (back button, category click...).
   useEffect(() => {
     setCity(params.get('city') ?? '');
     setAvailableFrom(params.get('availableFrom') ?? '');
@@ -30,7 +28,7 @@ export function SearchBar() {
         next.delete(key);
       }
     }
-    // The API needs both dates: drop a lonely one.
+
     if (!availableFrom || !availableTo) {
       next.delete('availableFrom');
       next.delete('availableTo');
